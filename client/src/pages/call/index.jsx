@@ -68,32 +68,35 @@ function Call() {
 
   useEffect(() => {
     console.log('localStream', local_stream);
-    if (!local_stream) return;
+    if (!local_stream || users.length > 1) {
+      return;
+    }
 
-    // const attemptReconnect = async (peerId) => {
-    //   console.log('attemptReconnect', peerId);
-    //   const conn = pc.current[peerId];
-    //   if (!conn) return;
+    const attemptReconnect = async (peerId) => {
+      console.log('attemptReconnect', peerId);
+      const conn = pc.current[peerId];
+      if (!conn) return;
 
-    //   reconnectAttempts.current[peerId] = (reconnectAttempts.current[peerId] || 0) + 1;
-    //   if (reconnectAttempts.current[peerId] > 3) {
-    //     console.warn("Too many reconnect attempts for", peerId, "— rebuilding...");
-    //     return rebuildPeerConnection(peerId);
-    //   }
+      reconnectAttempts.current[peerId] = (reconnectAttempts.current[peerId] || 0) + 1;
+      if (reconnectAttempts.current[peerId] > 3) {
+        console.warn("Too many reconnect attempts for", peerId, "— rebuilding...");
+        return rebuildPeerConnection(peerId);
+      }
 
-    //   try {
-    //     const offer = await conn.createOffer({ iceRestart: true });
-    //     await conn.setLocalDescription(offer);
-    //     socket.emit("offer", { to: peerId, sdp: offer });
-    //     console.log("ICE restart triggered for", peerId);
-    //   } catch (err) {
-    //     console.error("ICE restart failed, rebuilding connection", err);
-    //     rebuildPeerConnection(peerId);
-    //   }
-    // };
+      try {
+        const offer = await conn.createOffer({ iceRestart: true });
+        await conn.setLocalDescription(offer);
+        socket.emit("offer", { to: peerId, sdp: offer });
+        console.log("ICE restart triggered for", peerId);
+      } catch (err) {
+        console.error("ICE restart failed, rebuilding connection", err);
+        rebuildPeerConnection(peerId);
+      }
+    };
 
     const createPeerConnection = (peerId) => {
       console.log('createPeerConnection', peerId);
+
       if (pc.current[peerId]) return;
 
       const newPc = new RTCPeerConnection(iceConfig);
@@ -124,8 +127,7 @@ function Call() {
         if (newPc.iceConnectionState === "failed" ||
             newPc.iceConnectionState === "disconnected") {
           console.warn("Connection failed with", peerId);
-          // attemptReconnect(peerId);
-          rebuildPeerConnection(peerId);
+          attemptReconnect(peerId);
         }
         if (newPc.iceConnectionState === "connected") {
           reconnectAttempts.current[peerId] = 0;
@@ -264,13 +266,13 @@ function Call() {
 
     console.log('Users to connect', users);
     users
-      .filter(item => item[1] !== socket.id)
-      .forEach(item => {
-        const peerId = item[1];
-        if (socket.id < peerId && !pc.current[peerId]) {
-          startConnection(peerId);
-        }
-      });
+    .filter(item => item[1] !== socket.id)
+    .forEach(item => {
+      const peerId = item[1];
+      if (socket.id < peerId && !pc.current[peerId]) {
+        startConnection(peerId);
+      }
+    });
 
     return () => {
       socket.off("offer", handleOffer);
