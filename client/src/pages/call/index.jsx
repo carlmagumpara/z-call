@@ -39,7 +39,8 @@ function Call() {
   const { user_id, users } = usePresence();
   const pc = useRef({}); // peers
   const videoRef = useRef(null);
-  const pendingCandidates = useRef({}); // Queue to hold candidates
+  const pendingCandidates = useRef({});
+  const reconnectAttempts = useRef({});
   const [remote_streams, setRemoteStreams] = useState({});
   const [local_stream, setLocalStream] = useState(null);
 
@@ -67,9 +68,30 @@ function Call() {
     }
   }, [local_stream]);
 
-  useEffect(() => {
+  useEffect(() => {    
+    const attemptReconnect = async (peerId) => {
+      const conn = pc.current[peerId];
+      if (!conn) return;
+
+      reconnectAttempts.current[peerId] = (reconnectAttempts.current[peerId] || 0) + 1;
+      if (reconnectAttempts.current[peerId] > 3) {
+        console.warn("Too many reconnect attempts for", peerId, "— rebuilding...");
+        return rebuildPeerConnection(peerId);
+      }
+
+      try {
+        const offer = await conn.createOffer({ iceRestart: true });
+        await conn.setLocalDescription(offer);
+        socket.emit("offer", { to: peerId, sdp: offer });
+        console.log("ICE restart triggered for", peerId);
+      } catch (err) {
+        console.error("ICE restart failed, rebuilding connection", err);
+        rebuildPeerConnection(peerId);
+      }
+    };
+
     const createPeerConnection = (peerId) => {
-      if (pc.current[peerId]) return; // Avoid re-creating if already exists
+      if (pc.current[peerId]) return;
 
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
@@ -87,10 +109,20 @@ function Call() {
 
       newPc.onicecandidate = (e) => {
         if (e.candidate) {
-          socket.emit("ice-candidate", {
-            to: peerId,
-            candidate: e.candidate
-          });
+          socket.emit("ice-candidate", { to: peerId, candidate: e.candidate });
+        }
+      };
+
+      newPc.oniceconnectionstatechange = () => {
+        console.log("ICE state:", newPc.iceConnectionState);
+
+        if (newPc.iceConnectionState === "failed" ||
+            newPc.iceConnectionState === "disconnected") {
+          console.warn("Connection failed with", peerId);
+          attemptReconnect(peerId);
+        }
+        if (newPc.iceConnectionState === "connected") {
+          reconnectAttempts.current[peerId] = 0; // reset counter
         }
       };
 
@@ -105,16 +137,25 @@ function Call() {
       const offer = await conn.createOffer();
       await conn.setLocalDescription(offer);
 
-      socket.emit("offer", {
-        to: peerId,
-        sdp: offer
-      });
+      socket.emit("offer", { to: peerId, sdp: offer });
     };
 
+    const rebuildPeerConnection = async (peerId) => {
+      if (pc.current[peerId]) {
+        pc.current[peerId].close();
+        delete pc.current[peerId];
+      }
+      reconnectAttempts.current[peerId] = 0;
+      await startConnection(peerId);
+    };
+
+    // Start connections
     users
       .filter(item => item[1] !== socket.id)
       .forEach(item => {
-        startConnection(item[1]);
+        if (!pc.current[item[1]]) {
+          startConnection(item[1]);
+        }
       });
   }, [users, local_stream]);
 
@@ -123,7 +164,6 @@ function Call() {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-        // Add tracks for new connections
         if (local_stream) {
           local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
         }
@@ -162,8 +202,14 @@ function Call() {
       const conn = pc.current[from];
       if (conn) {
         try {
-          await conn.setRemoteDescription(new RTCSessionDescription(sdp));
-          // Process any pending candidates
+          if (conn.signalingState === "have-local-offer") {
+            await conn.setRemoteDescription(new RTCSessionDescription(sdp));
+            console.log("Remote answer set for:", from);
+          } else {
+            console.warn("Skipping answer because state is", conn.signalingState);
+          }
+
+          // Process queued ICE candidates
           if (pendingCandidates.current[from]) {
             for (const candidate of pendingCandidates.current[from]) {
               try {
@@ -179,6 +225,28 @@ function Call() {
         }
       }
     };
+
+    // const handleAnswer = async ({ from, sdp }) => {
+    //   const conn = pc.current[from];
+    //   if (conn) {
+    //     try {
+    //       await conn.setRemoteDescription(new RTCSessionDescription(sdp));
+    //       // Process any pending candidates
+    //       if (pendingCandidates.current[from]) {
+    //         for (const candidate of pendingCandidates.current[from]) {
+    //           try {
+    //             await conn.addIceCandidate(new RTCIceCandidate(candidate));
+    //           } catch (err) {
+    //             console.error("Error adding queued candidate from answer handler", err);
+    //           }
+    //         }
+    //         delete pendingCandidates.current[from];
+    //       }
+    //     } catch (err) {
+    //       console.warn("Failed to set remote description for answer", from, err);
+    //     }
+    //   }
+    // };
 
     const handleIceCandidate = async ({ from, candidate }) => {
       const conn = pc.current[from];
