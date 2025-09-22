@@ -266,7 +266,7 @@ function Call() {
       .filter(item => item[1] !== socket.id)
       .forEach(item => {
         const peerId = item[1];
-        if (socket.id < peerId && !pc.current[peerId]) {
+        if (!pc.current[peerId]) {
           startConnection(peerId);
         }
       });
