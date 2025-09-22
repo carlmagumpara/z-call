@@ -2,14 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
+const iceConfig = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" }
+  ]
+};
+
 function Call() {
   const { user_id, users } = usePresence();
   const pc = useRef({}); // peers
   const channel = useRef(null);
   const videoRef = useRef(null);
+  const pendingCandidates = useRef({});
   const [peers, setPeers] = useState({});
   const [peer_status, setPeerStatus] = useState({});
-  const [remote_streams, setRemoteStreams] = useState([]);
+  const [remote_streams, setRemoteStreams] = useState({});
   const [local_stream, setLocalStream] = useState(null);
 
   useEffect(() => {
@@ -44,7 +51,7 @@ function Call() {
   useEffect(() => {
     const createPeerConnection = (peerId) => {
       if (!pc.current[peerId]) {
-        pc.current[peerId] = new RTCPeerConnection();
+        pc.current[peerId] = new RTCPeerConnection(iceConfig);
 
         if (local_stream) {
           local_stream.getTracks().forEach(track => {
@@ -104,7 +111,7 @@ function Call() {
   useEffect(() => {
     socket.on("offer", async ({ from, sdp }) => {
       if (!pc.current[from]) {
-        pc.current[from] = new RTCPeerConnection();
+        pc.current[from] = new RTCPeerConnection(iceConfig);
 
         pc.current[from].ontrack = (event) => {
           console.log("Received remote track from", from, event.streams);
@@ -143,6 +150,19 @@ function Call() {
       }
 
       await pc.current[from].setRemoteDescription(new RTCSessionDescription(sdp));
+
+      if (pendingCandidates.current[from]) {
+        for (const c of pendingCandidates.current[from]) {
+          try {
+            await pc.current[from].addIceCandidate(new RTCIceCandidate(c));
+            console.log("Added queued ICE candidate from:", from);
+          } catch (err) {
+            console.error("Error adding queued candidate", err);
+          }
+        }
+        delete pendingCandidates.current[from];
+      }
+
       const answer = await pc.current[from].createAnswer();
       await pc.current[from].setLocalDescription(answer);
 
@@ -167,11 +187,20 @@ function Call() {
     // handle ice candidate
     socket.on("ice-candidate", async ({ from, candidate }) => {
       if (pc.current[from]) {
-        try {
-          await pc.current[from].addIceCandidate(new RTCIceCandidate(candidate));
-          console.log("Added ICE candidate from:", from);
-        } catch (err) {
-          console.error("Error adding ICE candidate", err);
+        if (pc.current[from].remoteDescription) {
+          try {
+            await pc.current[from].addIceCandidate(new RTCIceCandidate(candidate));
+            console.log("Added ICE candidate from:", from);
+          } catch (err) {
+            console.error("Error adding ICE candidate", err);
+          }
+        } else {
+          // remote description not set yet, queue it
+          if (!pendingCandidates.current[from]) {
+            pendingCandidates.current[from] = [];
+          }
+          pendingCandidates.current[from].push(candidate);
+          console.log("Queued ICE candidate from:", from);
         }
       }
     });
