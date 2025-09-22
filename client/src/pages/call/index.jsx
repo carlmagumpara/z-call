@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
-export const iceConfig = {
+const iceConfig = {
   iceServers: [
     { 
       urls: "stun:stun.l.google.com:19302" 
@@ -37,94 +37,185 @@ export const iceConfig = {
 
 function Call() {
   const { user_id, users } = usePresence();
-
-
-  const pc = useRef(null);
+  const pc = useRef({}); // peers
   const channel = useRef(null);
   const targetId = useRef(null);
-  const [status, setStatus] = useState("disconnected");
   const [peers, setPeers] = useState({});
+  const [peer_status, setPeerStatus] = useState({});
+
+  const [remote_streams, setRemoteStreams] = useState([]);
+  const [local_stream, setLocalStream] = useState(null);
 
   useEffect(() => {
-    const startConnection = async () => {
-      const offer = await pc.current.createOffer();
-      await pc.current.setLocalDescription(offer);
-      socket.emit("offer", { to: peerId, sdp: offer });
+    const setUpLocalStream = async () => {
+      const localStream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+
+      setLocalStream(localStream);
+
+      // important: add agad sa lahat ng existing connections
+      localStream.getTracks().forEach(track => {
+        Object.values(pc.current).forEach(conn => {
+          conn.addTrack(track, localStream);
+        });
+      });
     };
 
-    // startConnection(peerId);
+    setUpLocalStream();
+  }, []);
 
-    console.log(users);
+  useEffect(() => {
+    const createPeerConnection = (peerId) => {
+      if (!pc.current[peerId]) {
+        pc.current[peerId] = new RTCPeerConnection(iceConfig);
+
+        // attach local tracks agad
+        if (local_stream) {
+          local_stream.getTracks().forEach(track => {
+            pc.current[peerId].addTrack(track, local_stream);
+          });
+        }
+
+        pc.current[peerId].ontrack = (event) => {
+          const remoteStream = event.streams[0];
+          setRemoteStreams(prev => ({
+            ...prev,
+            [peerId]: remoteStream
+          }));
+        };
+
+        pc.current[peerId].onconnectionstatechange = () => {
+          setPeerStatus(prevState => ({
+            ...prevState,
+            [peerId]: pc.current[peerId].connectionState
+          }));
+        };
+
+        pc.current[peerId].onicecandidate = (e) => {
+          if (e.candidate) {
+            socket.emit("ice-candidate", { 
+              to: peerId,
+              candidate: e.candidate 
+            });
+          }
+        };
+
+        console.log("Created RTCPeerConnection for:", peerId);
+      }
+    };
+
+    const startConnection = async (peerId) => {
+      createPeerConnection(peerId);
+
+      const offer = await pc.current[peerId].createOffer();
+      await pc.current[peerId].setLocalDescription(offer);
+
+      socket.emit("offer", { 
+        to: peerId, 
+        sdp: offer 
+      });
+    };
+
+    users
+      .filter(item => item[1] !== socket.id)
+      .forEach(item => {
+        startConnection(item[1]);
+      });
   }, [users]);
 
   useEffect(() => {
-    pc.current = new RTCPeerConnection(iceConfig);
-
-    pc.current.onconnectionstatechange = () => {
-      console.log("Connection state:", pc.current.connectionState);
-      setStatus(pc.current.connectionState);
-    };
-
-    pc.current.onicecandidate = (e) => {
-      if (e.candidate) {
-        socket.emit("ice-candidate", { 
-          to: targetId.current, 
-          candidate: e.candidate 
-        });
-      }
-    };
-
     socket.on("offer", async ({ from, sdp }) => {
-      targetId.current = from;
-      pc.current = new RTCPeerConnection(iceConfig);
+      if (!pc.current[from]) {
+        pc.current[from] = new RTCPeerConnection(iceConfig);
 
-      pc.current.ondatachannel = (e) => {
-        e.channel.onmessage = (msg) => {
+        pc.current[from].ontrack = (event) => {
+          console.log("Received remote track from", from, event.streams);
+
+          // karaniwang may 1 stream lang (event.streams[0])
+          const remoteStream = event.streams[0];
+
+          // save sa state para magamit sa <video> or <audio> tag
+          setRemoteStreams(prev => ({
+            ...prev,
+            [from]: remoteStream
+          }));
         };
-      };
 
-      pc.current.onconnectionstatechange = () => {
-        console.log("Connection state:", pc.current.connectionState);
-        setStatus(pc.current.connectionState);
-      };
+        pc.current[from].ondatachannel = (e) => {
+          e.channel.onmessage = (msg) => {
+            console.log("Message from", from, msg.data);
+          };
+        };
 
-      pc.current.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit("ice-candidate", { 
-            to: targetId.current, 
-            candidate: e.candidate 
-          });
-        }
-      };
+        pc.current[from].onconnectionstatechange = () => {
+          setPeerStatus(prevState => ({
+            ...prevState,
+            [from]: pc.current[from].connectionState
+          }));
+        };
 
-      await pc.current.setRemoteDescription(new RTCSessionDescription(sdp));
-      const answer = await pc.current.createAnswer();
-      await pc.current.setLocalDescription(answer);
+        pc.current[from].onicecandidate = (e) => {
+          if (e.candidate) {
+            socket.emit("ice-candidate", { 
+              to: from, 
+              candidate: e.candidate 
+            });
+          }
+        };
+      }
+
+      await pc.current[from].setRemoteDescription(new RTCSessionDescription(sdp));
+      const answer = await pc.current[from].createAnswer();
+      await pc.current[from].setLocalDescription(answer);
+
       socket.emit("answer", { to: from, sdp: answer });
 
-      console.log('offer');
+      console.log("Processed offer from:", from);
     });
 
-    socket.on("answer", async ({ sdp }) => {
-      await pc.current.setRemoteDescription(new RTCSessionDescription(sdp));
-
-      console.log('answer');
-    });
-
-    socket.on("ice-candidate", async ({ candidate }) => {
-      try {
-        await pc.current.addIceCandidate(new RTCIceCandidate(candidate));
-
-        console.log('ice-candidate');
-      } catch (err) {
-        console.error("Error adding ICE candidate", err);
+    // handle answer
+    socket.on("answer", async ({ from, sdp }) => {
+      if (pc.current[from]) {
+        await pc.current[from].setRemoteDescription(new RTCSessionDescription(sdp));
+        console.log("Processed answer from:", from);
       }
     });
 
-    return () => {};
+    // handle ice candidate
+    socket.on("ice-candidate", async ({ from, candidate }) => {
+      if (pc.current[from]) {
+        try {
+          await pc.current[from].addIceCandidate(new RTCIceCandidate(candidate));
+          console.log("Added ICE candidate from:", from);
+        } catch (err) {
+          console.error("Error adding ICE candidate", err);
+        }
+      }
+    });
+
+    return () => {
+      socket.off("offer");
+      socket.off("answer");
+      socket.off("ice-candidate");
+    };
   }, []);
 
-  return null;
+  console.log(peer_status);
+
+  return (
+    <>
+      {Object.entries(remote_streams).map(([peerId, stream]) => (
+        <video 
+          key={peerId} 
+          autoPlay 
+          playsInline 
+          ref={video => { if (video) video.srcObject = stream; }} 
+        />
+      ))}
+    </>
+  );
 }
 
 export default Call;
