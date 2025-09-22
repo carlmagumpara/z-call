@@ -121,7 +121,9 @@ function Call() {
     users
       .filter(item => item[1] !== socket.id)
       .forEach(item => {
-        startConnection(item[1]);
+        if (!pc.current[item[1]]) {
+          startConnection(item[1]);
+        }
       });
   }, [users]);
 
@@ -177,9 +179,14 @@ function Call() {
 
     // handle answer
     socket.on("answer", async ({ from, sdp }) => {
-      if (pc.current[from]) {
-        await pc.current[from].setRemoteDescription(new RTCSessionDescription(sdp));
-        console.log("Processed answer from:", from);
+      const conn = pc.current[from];
+      if (conn) {
+        if (conn.signalingState === "have-local-offer") {
+          await conn.setRemoteDescription(new RTCSessionDescription(sdp));
+          console.log("Processed answer from:", from);
+        } else {
+          console.warn("Skipping answer from", from, "wrong state:", conn.signalingState);
+        }
       }
     });
 
