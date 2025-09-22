@@ -107,7 +107,8 @@ function Call() {
 
       newPc.ontrack = (event) => {
         const remoteStream = event.streams[0];
-        setRemoteStreams(prev => ({ ...prev, [peerId]: remoteStream }));
+        const videoEl = document.getElementById(`remote-${peerId}`);
+        if (videoEl) videoEl.srcObject = remoteStream;
       };
 
       newPc.onicecandidate = (e) => {
