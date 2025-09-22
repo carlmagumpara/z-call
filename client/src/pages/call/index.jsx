@@ -68,7 +68,7 @@ function Call() {
 
   useEffect(() => {
     console.log('localStream', local_stream);
-    if (!local_stream || users.length > 1) {
+    if (!local_stream || users.length <= 1) {
       return;
     }
 
