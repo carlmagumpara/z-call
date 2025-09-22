@@ -5,23 +5,28 @@ import { usePresence } from '@/contexts/presence';
 const iceConfig = {
   iceServers: [
     {
-      urls: "stun:openrelay.metered.ca:80"
+      urls: "stun:stun.relay.metered.ca:80",
     },
     {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject"
+      urls: "turn:global.relay.metered.ca:80",
+      username: "2c56b81142b3fd367df01985",
+      credential: "2ev9XZvN4tVJsdPC",
     },
     {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject"
+      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      username: "2c56b81142b3fd367df01985",
+      credential: "2ev9XZvN4tVJsdPC",
     },
     {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject"
-    }
+      urls: "turn:global.relay.metered.ca:443",
+      username: "2c56b81142b3fd367df01985",
+      credential: "2ev9XZvN4tVJsdPC",
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "2c56b81142b3fd367df01985",
+      credential: "2ev9XZvN4tVJsdPC",
+    },
   ]
 };
 
