@@ -147,12 +147,12 @@ function Call() {
       await startConnection(peerId);
     };
 
-    // Start connections
     users
       .filter(item => item[1] !== socket.id)
-      .map(item => {
-        if (!pc.current[item[1]]) {
-          startConnection(item[1]);
+      .forEach(item => {
+        const peerId = item[1];
+        if (socket.id < peerId && !pc.current[peerId]) {
+          startConnection(peerId);
         }
       });
   }, [users, local_stream]);
@@ -168,7 +168,7 @@ function Call() {
 
         conn.ontrack = (event) => {
           const remoteStream = event.streams[0];
-          const videoEl = document.getElementById(`remote-${peerId}`);
+          const videoEl = document.getElementById(`remote-${from}`);
           if (videoEl) {
             videoEl.srcObject = remoteStream;
           }
