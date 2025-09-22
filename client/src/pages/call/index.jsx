@@ -66,10 +66,10 @@ function Call() {
   }, []);
 
   useEffect(() => {
-    if (videoRef.current && localStream) {
-      videoRef.current.srcObject = localStream.stream; 
+    if (videoRef.current && local_stream) {
+      videoRef.current.srcObject = local_stream.stream; 
     }
-  }, [localStream]);
+  }, [local_stream]);
 
   useEffect(() => {
     const createPeerConnection = (peerId) => {
