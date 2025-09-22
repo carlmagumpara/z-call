@@ -39,10 +39,9 @@ function Call() {
   const { user_id, users } = usePresence();
   const pc = useRef({}); // peers
   const channel = useRef(null);
-  const targetId = useRef(null);
+  const videoRef = useRef(null);
   const [peers, setPeers] = useState({});
   const [peer_status, setPeerStatus] = useState({});
-
   const [remote_streams, setRemoteStreams] = useState([]);
   const [local_stream, setLocalStream] = useState(null);
 
@@ -65,6 +64,12 @@ function Call() {
 
     setUpLocalStream();
   }, []);
+
+  useEffect(() => {
+    if (videoRef.current && localStream) {
+      videoRef.current.srcObject = localStream.stream; 
+    }
+  }, [localStream]);
 
   useEffect(() => {
     const createPeerConnection = (peerId) => {
@@ -213,6 +218,12 @@ function Call() {
 
   return (
     <>
+      <video 
+        ref={videoRef} 
+        autoPlay 
+        playsInline 
+        muted
+      />
       {Object.entries(remote_streams).map(([peerId, stream]) => (
         <video 
           key={peerId} 
