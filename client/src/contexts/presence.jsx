@@ -34,7 +34,7 @@ function PresenceProvider({ children }) {
     };
 
     const onUpdateUsers = (value) => {
-      console.log("update_users", typeof value);
+      console.log("update_users", value);
       // setUsers(value);
     };
 

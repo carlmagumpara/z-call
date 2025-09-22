@@ -39,7 +39,7 @@ io.on('connection', (socket) => {
   socket.on("user_online", async ({ user_id }) => {
     onlineUsers.set(user_id, socket.id);
     console.log(`${user_id} is online`);
-    io.emit("update_users", onlineUsers.entries());
+    io.emit("update_users", Array.from(onlineUsers.entries()));
   });
 
   socket.on("offer", (data) => {
@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
 
     if (userId) {
       console.log(`${userId} went offline`);
-      io.emit("update_users", onlineUsers.entries());
+      io.emit("update_users", Array.from(onlineUsers.entries()));
     }
   });
 });
