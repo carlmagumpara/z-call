@@ -223,6 +223,10 @@ function Call() {
         autoPlay 
         playsInline 
         muted
+        style={{
+          width: 300,
+          height: 200,
+        }}
       />
       {Object.entries(remote_streams).map(([peerId, stream]) => (
         <video 
@@ -230,6 +234,10 @@ function Call() {
           autoPlay 
           playsInline 
           ref={video => { if (video) video.srcObject = stream; }} 
+          style={{
+            width: 300,
+            height: 200,
+          }}
         />
       ))}
     </>
