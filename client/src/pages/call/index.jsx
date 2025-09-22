@@ -4,29 +4,34 @@ import { usePresence } from '@/contexts/presence';
 
 const iceConfig = {
   iceServers: [
-    {
-      urls: "stun:stun.relay.metered.ca:80",
+    { 
+      urls: "stun:stun.l.google.com:19302" 
     },
     {
-      urls: "turn:global.relay.metered.ca:80",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
+      urls: 'turn:numb.viagenie.ca',
+      credential: 'muazkh',
+      username: 'webrtc@live.com'
     },
     {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
+      urls: 'turn:192.158.29.39:3478?transport=udp',
+      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+      username: '28224511:1379330808'
     },
     {
-      urls: "turn:global.relay.metered.ca:443",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
+      urls: 'turn:192.158.29.39:3478?transport=tcp',
+      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+      username: '28224511:1379330808'
     },
     {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
+      urls: 'turn:turn.bistri.com:80',
+      credential: 'homeo',
+      username: 'homeo'
     },
+    {
+      urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+      credential: 'webrtc',
+      username: 'webrtc'
+    }
   ]
 };
 
