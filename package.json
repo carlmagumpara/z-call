@@ -1,0 +1,19 @@
+{
+  "name": "fs-server",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "build": "cd client && npm install && npm run build && cd .."
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "redis": "^5.8.2",
+    "socket.io": "^4.8.1"
+  },
+  "type": "module"
+}
