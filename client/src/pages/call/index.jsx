@@ -67,11 +67,6 @@ function Call() {
   }, []);
 
   useEffect(() => {
-    console.log('localStream', local_stream);
-    if (!local_stream || users.length <= 1) {
-      return;
-    }
-
     const attemptReconnect = async (peerId) => {
       console.log('attemptReconnect', peerId);
       const conn = pc.current[peerId];
@@ -264,16 +259,19 @@ function Call() {
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
 
-    console.log('Users to connect', users);
-    users
-    .filter(item => item[1] !== socket.id)
-    .forEach(item => {
-      const peerId = item[1];
-      if (socket.id < peerId && !pc.current[peerId]) {
-        startConnection(peerId);
-      }
-    });
-
+    console.log('localStream', local_stream);
+    if (local_stream && users.length > 1) {
+      console.log('Users to connect', users);
+      users
+      .filter(item => item[1] !== socket.id)
+      .forEach(item => {
+        const peerId = item[1];
+        if (socket.id < peerId && !pc.current[peerId]) {
+          startConnection(peerId);
+        }
+      });
+    }
+    
     return () => {
       socket.off("offer", handleOffer);
       socket.off("answer", handleAnswer);
