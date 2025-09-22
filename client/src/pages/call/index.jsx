@@ -113,6 +113,12 @@ function Call() {
       if (!pc.current[from]) {
         pc.current[from] = new RTCPeerConnection(iceConfig);
 
+        if (local_stream) {
+          local_stream.getTracks().forEach(track => {
+            pc.current[from].addTrack(track, local_stream);
+          });
+        }
+
         pc.current[from].ontrack = (event) => {
           console.log("Received remote track from", from, event.streams);
 
@@ -173,14 +179,11 @@ function Call() {
 
     // handle answer
     socket.on("answer", async ({ from, sdp }) => {
-      const conn = pc.current[from];
-      if (conn) {
-        if (conn.signalingState === "have-local-offer") {
-          await conn.setRemoteDescription(new RTCSessionDescription(sdp));
-          console.log("Processed answer from:", from);
-        } else {
-          console.warn("Skipping answer from", from, "wrong state:", conn.signalingState);
-        }
+      try {
+        await conn.setRemoteDescription(new RTCSessionDescription(sdp));
+        console.log("Processed answer from:", from);
+      } catch (err) {
+        console.warn("Failed to set remote description for answer", from, err);
       }
     });
 
