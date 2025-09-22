@@ -67,7 +67,7 @@ function Call() {
   }, []);
 
   useEffect(() => {
-    console.log('localStream', localStream);
+    console.log('localStream', local_stream);
     if (!local_stream) return;
 
     const attemptReconnect = async (peerId) => {
