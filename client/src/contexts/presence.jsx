@@ -34,7 +34,8 @@ function PresenceProvider({ children }) {
     };
 
     const onUpdateUsers = (value) => {
-      setUsers(value);
+      console.log("update_users", value);
+      // setUsers(value);
     };
 
     socket.on('connect', onConnect);
