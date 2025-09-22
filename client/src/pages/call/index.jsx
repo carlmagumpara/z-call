@@ -38,10 +38,8 @@ const iceConfig = {
 function Call() {
   const { user_id, users } = usePresence();
   const pc = useRef({});
-  const videoRef = useRef(null);
   const pendingCandidates = useRef({});
   const reconnectAttempts = useRef({});
-  const [remote_streams, setRemoteStreams] = useState({});
   const [local_stream, setLocalStream] = useState(null);
 
   useEffect(() => {
@@ -50,6 +48,8 @@ function Call() {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(localStream);
+        const videoEl = document.getElementById("local");
+        if (videoEl) videoEl.srcObject = localStream;
       } catch (err) {
         console.error("Failed to get local stream", err);
       }
@@ -61,12 +61,6 @@ function Call() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (videoRef.current && local_stream) {
-      videoRef.current.srcObject = local_stream;
-    }
-  }, [local_stream]);
 
   useEffect(() => {
     if (!local_stream) return;
@@ -99,16 +93,16 @@ function Call() {
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      if (local_stream) {
-        local_stream.getTracks().forEach(track => {
-          newPc.addTrack(track, local_stream);
-        });
-      }
+      local_stream.getTracks().forEach(track => {
+        newPc.addTrack(track, local_stream);
+      });
 
       newPc.ontrack = (event) => {
         const remoteStream = event.streams[0];
         const videoEl = document.getElementById(`remote-${peerId}`);
-        if (videoEl) videoEl.srcObject = remoteStream;
+        if (videoEl) {
+          videoEl.srcObject = remoteStream
+        };
       };
 
       newPc.onicecandidate = (e) => {
@@ -156,7 +150,7 @@ function Call() {
     // Start connections
     users
       .filter(item => item[1] !== socket.id)
-      .forEach(item => {
+      .map(item => {
         if (!pc.current[item[1]]) {
           startConnection(item[1]);
         }
@@ -164,16 +158,20 @@ function Call() {
   }, [users, local_stream]);
 
   useEffect(() => {
+    if (!local_stream) return;
+
     const handleOffer = async ({ from, sdp }) => {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-        if (local_stream) {
-          local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
-        }
+        local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
 
         conn.ontrack = (event) => {
-          setRemoteStreams(prev => ({ ...prev, [from]: event.streams[0] }));
+          const remoteStream = event.streams[0];
+          const videoEl = document.getElementById(`remote-${peerId}`);
+          if (videoEl) {
+            videoEl.srcObject = remoteStream;
+          }
         };
 
         conn.onicecandidate = (e) => {
@@ -230,28 +228,6 @@ function Call() {
       }
     };
 
-    // const handleAnswer = async ({ from, sdp }) => {
-    //   const conn = pc.current[from];
-    //   if (conn) {
-    //     try {
-    //       await conn.setRemoteDescription(new RTCSessionDescription(sdp));
-    //       // Process any pending candidates
-    //       if (pendingCandidates.current[from]) {
-    //         for (const candidate of pendingCandidates.current[from]) {
-    //           try {
-    //             await conn.addIceCandidate(new RTCIceCandidate(candidate));
-    //           } catch (err) {
-    //             console.error("Error adding queued candidate from answer handler", err);
-    //           }
-    //         }
-    //         delete pendingCandidates.current[from];
-    //       }
-    //     } catch (err) {
-    //       console.warn("Failed to set remote description for answer", from, err);
-    //     }
-    //   }
-    // };
-
     const handleIceCandidate = async ({ from, candidate }) => {
       const conn = pc.current[from];
       if (!conn) {
@@ -291,15 +267,18 @@ function Call() {
   return (
     <>
       <video
-        ref={videoRef}
+        id="local"
         autoPlay
         playsInline
         muted
         style={{ width: 300, height: 200 }}
       />
-      {Object.entries(remote_streams).map(([peerId, stream]) => (
-        <video 
-          id={`remote-${peerId}`} 
+      {users
+      .filter(item => item[1] !== socket.id)
+      .map(item => (
+        <video
+          key={item[1]}
+          id={`remote-${item[1]}`}
           autoPlay 
           playsInline 
           style={{ width: 300, height: 200 }} 
