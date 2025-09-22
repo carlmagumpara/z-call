@@ -69,7 +69,6 @@ function Call() {
       const conn = pc.current[peerId];
       if (!conn) return;
 
-      // Limit retries
       reconnectAttempts.current[peerId] = (reconnectAttempts.current[peerId] || 0) + 1;
       if (reconnectAttempts.current[peerId] > 3) {
         console.warn("Too many reconnect attempts for", peerId, "— rebuilding...");
@@ -98,6 +97,7 @@ function Call() {
       });
 
       newPc.ontrack = (event) => {
+        console.log('new track added: ', peerId);
         const remoteStream = event.streams[0];
         const videoEl = document.getElementById(`remote-${peerId}`);
         if (videoEl) {
@@ -167,6 +167,8 @@ function Call() {
         local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
 
         conn.ontrack = (event) => {
+          console.log('new track added: ', from);
+
           const remoteStream = event.streams[0];
           const videoEl = document.getElementById(`remote-${from}`);
           if (videoEl) {
