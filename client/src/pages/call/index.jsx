@@ -2,34 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
-const iceConfig = {
-  iceServers: [
-    {
-      urls: "stun:stun.relay.metered.ca:80",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:443",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
-    },
-    {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "2c56b81142b3fd367df01985",
-      credential: "2ev9XZvN4tVJsdPC",
-    },
-  ]
-};
-
 function Call() {
   const { user_id, users } = usePresence();
   const pc = useRef({}); // peers
@@ -72,7 +44,7 @@ function Call() {
   useEffect(() => {
     const createPeerConnection = (peerId) => {
       if (!pc.current[peerId]) {
-        pc.current[peerId] = new RTCPeerConnection(iceConfig);
+        pc.current[peerId] = new RTCPeerConnection();
 
         if (local_stream) {
           local_stream.getTracks().forEach(track => {
@@ -132,7 +104,7 @@ function Call() {
   useEffect(() => {
     socket.on("offer", async ({ from, sdp }) => {
       if (!pc.current[from]) {
-        pc.current[from] = new RTCPeerConnection(iceConfig);
+        pc.current[from] = new RTCPeerConnection();
 
         pc.current[from].ontrack = (event) => {
           console.log("Received remote track from", from, event.streams);
