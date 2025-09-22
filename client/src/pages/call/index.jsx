@@ -147,17 +147,6 @@ function Call() {
       await startConnection(peerId);
     };
 
-    users
-      .filter(item => item[1] !== socket.id)
-      .forEach(item => {
-        const peerId = item[1];
-        if (socket.id < peerId && !pc.current[peerId]) {
-          startConnection(peerId);
-        }
-      });
-  }, [users, local_stream]);
-
-  useEffect(() => {
     const handleOffer = async ({ from, sdp }) => {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
@@ -257,12 +246,21 @@ function Call() {
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
 
+    users
+      .filter(item => item[1] !== socket.id)
+      .forEach(item => {
+        const peerId = item[1];
+        if (socket.id < peerId && !pc.current[peerId]) {
+          startConnection(peerId);
+        }
+      });
+
     return () => {
       socket.off("offer", handleOffer);
       socket.off("answer", handleAnswer);
       socket.off("ice-candidate", handleIceCandidate);
     };
-  }, [local_stream]);
+  }, [users, local_stream]);
 
   return (
     <>
