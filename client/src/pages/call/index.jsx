@@ -120,7 +120,7 @@ function Call() {
           attemptReconnect(peerId);
         }
         if (newPc.iceConnectionState === "connected") {
-          reconnectAttempts.current[peerId] = 0; // reset counter
+          reconnectAttempts.current[peerId] = 0;
         }
       };
 
@@ -158,8 +158,6 @@ function Call() {
   }, [users, local_stream]);
 
   useEffect(() => {
-    if (!local_stream) return;
-
     const handleOffer = async ({ from, sdp }) => {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
