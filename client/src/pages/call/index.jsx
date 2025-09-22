@@ -180,6 +180,7 @@ function Call() {
     // handle answer
     socket.on("answer", async ({ from, sdp }) => {
       try {
+        const conn = pc.current[from];
         await conn.setRemoteDescription(new RTCSessionDescription(sdp));
         console.log("Processed answer from:", from);
       } catch (err) {
