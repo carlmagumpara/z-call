@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
@@ -50,11 +51,14 @@ function Call() {
         setLocalStream(localStream);
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
+        console.log('Local video added');
       } catch (err) {
         console.error("Failed to get local stream", err);
       }
     };
+
     setUpLocalStream();
+    
     return () => {
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
@@ -63,9 +67,11 @@ function Call() {
   }, []);
 
   useEffect(() => {
+    console.log('localStream', localStream);
     if (!local_stream) return;
 
     const attemptReconnect = async (peerId) => {
+      console.log('attemptReconnect', peerId);
       const conn = pc.current[peerId];
       if (!conn) return;
 
@@ -87,6 +93,7 @@ function Call() {
     };
 
     const createPeerConnection = (peerId) => {
+      console.log('createPeerConnection', peerId);
       if (pc.current[peerId]) return;
 
       const newPc = new RTCPeerConnection(iceConfig);
@@ -128,6 +135,7 @@ function Call() {
     };
 
     const startConnection = async (peerId) => {
+      console.log('startConnection', peerId);
       createPeerConnection(peerId);
       const conn = pc.current[peerId];
       if (!conn) return;
@@ -135,10 +143,14 @@ function Call() {
       const offer = await conn.createOffer(); // ✅ first connect, no ICE restart
       await conn.setLocalDescription(offer);
 
-      socket.emit("offer", { to: peerId, sdp: offer });
+      socket.emit("offer", { 
+        to: peerId, 
+        sdp: offer 
+      });
     };
 
     const rebuildPeerConnection = async (peerId) => {
+      console.log('rebuildPeerConnection', peerId);
       if (pc.current[peerId]) {
         pc.current[peerId].close();
         delete pc.current[peerId];
@@ -148,6 +160,7 @@ function Call() {
     };
 
     const handleOffer = async ({ from, sdp }) => {
+      console.log('handleOffer', from);
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
@@ -190,6 +203,7 @@ function Call() {
     };
 
     const handleAnswer = async ({ from, sdp }) => {
+      console.log('handleAnswer', from);
       const conn = pc.current[from];
       if (conn) {
         try {
@@ -218,6 +232,7 @@ function Call() {
     };
 
     const handleIceCandidate = async ({ from, candidate }) => {
+      console.log('handleIceCandidate', from);
       const conn = pc.current[from];
       if (!conn) {
         console.warn("Peer connection not found for ICE candidate from:", from);
@@ -246,6 +261,7 @@ function Call() {
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
 
+    console.log('Users to connect', users);
     users
       .filter(item => item[1] !== socket.id)
       .forEach(item => {
@@ -263,13 +279,13 @@ function Call() {
   }, [users, local_stream]);
 
   return (
-    <>
+    <Container>
       <video
         id="local"
         autoPlay
         playsInline
         muted
-        style={{ width: 300, height: 200 }}
+        style={{ width: 300, height: 200, backgroundColor: '#000000' }}
       />
       {users
       .filter(item => item[1] !== socket.id)
@@ -279,10 +295,10 @@ function Call() {
           id={`remote-${item[1]}`}
           autoPlay 
           playsInline 
-          style={{ width: 300, height: 200 }} 
+          style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
         />
       ))}
-    </>
+    </Container>
   );
 }
 
