@@ -4,33 +4,23 @@ import { usePresence } from '@/contexts/presence';
 
 const iceConfig = {
   iceServers: [
-    { 
-      urls: "stun:stun.l.google.com:19302" 
+    {
+      urls: "stun:openrelay.metered.ca:80"
     },
     {
-      urls: 'turn:numb.viagenie.ca',
-      credential: 'muazkh',
-      username: 'webrtc@live.com'
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject"
     },
     {
-      urls: 'turn:192.158.29.39:3478?transport=udp',
-      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-      username: '28224511:1379330808'
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject"
     },
     {
-      urls: 'turn:192.158.29.39:3478?transport=tcp',
-      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-      username: '28224511:1379330808'
-    },
-    {
-      urls: 'turn:turn.bistri.com:80',
-      credential: 'homeo',
-      username: 'homeo'
-    },
-    {
-      urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-      credential: 'webrtc',
-      username: 'webrtc'
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject"
     }
   ]
 };
@@ -46,28 +36,31 @@ function Call() {
   const [local_stream, setLocalStream] = useState(null);
 
   useEffect(() => {
-    const setUpLocalStream = async () => {
-      const localStream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
+    let localStream;
 
+    const setUpLocalStream = async () => {
+      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setLocalStream(localStream);
 
-      // important: add agad sa lahat ng existing connections
       localStream.getTracks().forEach(track => {
-        Object.values(pc.current).forEach(conn => {
+        Object.values(pc.current || {}).forEach(conn => {
           conn.addTrack(track, localStream);
         });
       });
     };
 
     setUpLocalStream();
+
+    return () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, []);
 
   useEffect(() => {
     if (videoRef.current && local_stream) {
-      videoRef.current.srcObject = local_stream.stream; 
+      videoRef.current.srcObject = local_stream; 
     }
   }, [local_stream]);
 
@@ -76,7 +69,6 @@ function Call() {
       if (!pc.current[peerId]) {
         pc.current[peerId] = new RTCPeerConnection(iceConfig);
 
-        // attach local tracks agad
         if (local_stream) {
           local_stream.getTracks().forEach(track => {
             pc.current[peerId].addTrack(track, local_stream);
