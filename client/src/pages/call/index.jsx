@@ -46,7 +46,6 @@ function Call() {
 
   useEffect(() => {
     let localStream;
-
     const setUpLocalStream = async () => {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -59,17 +58,18 @@ function Call() {
       }
     };
 
-     setUpLocalStream();
-
-     return () => {
+    setUpLocalStream();
+    
+    return () => {
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
-     }
+    };
   }, []);
 
   useEffect(() => {
     const attemptReconnect = async (peerId) => {
+      console.log('attemptReconnect', peerId);
       const conn = pc.current[peerId];
       if (!conn) return;
 
@@ -91,16 +91,16 @@ function Call() {
     };
 
     const createPeerConnection = (peerId) => {
+      console.log('createPeerConnection', peerId);
+
       if (pc.current[peerId]) return;
 
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      if(local_stream) {
-        local_stream.getTracks().forEach(track => {
-          newPc.addTrack(track, local_stream);
-        });
-      }
+      local_stream.getTracks().forEach(track => {
+        newPc.addTrack(track, local_stream);
+      });
 
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
@@ -134,6 +134,7 @@ function Call() {
     };
 
     const startConnection = async (peerId) => {
+      console.log('startConnection', peerId);
       createPeerConnection(peerId);
       const conn = pc.current[peerId];
       if (!conn) return;
@@ -141,10 +142,14 @@ function Call() {
       const offer = await conn.createOffer();
       await conn.setLocalDescription(offer);
 
-      socket.emit("offer", { to: peerId, sdp: offer });
+      socket.emit("offer", { 
+        to: peerId, 
+        sdp: offer 
+      });
     };
 
     const rebuildPeerConnection = async (peerId) => {
+      console.log('rebuildPeerConnection', peerId);
       if (pc.current[peerId]) {
         pc.current[peerId].close();
         delete pc.current[peerId];
@@ -154,15 +159,11 @@ function Call() {
     };
 
     const handleOffer = async ({ from, sdp }) => {
+      console.log('handleOffer', from);
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-
-        if(local_stream) {
-          local_stream.getTracks().forEach(track => {
-            conn.addTrack(track, local_stream);
-          });
-        }
+        local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
@@ -251,17 +252,19 @@ function Call() {
       }
     };
 
+    console.log('localStream', local_stream);
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
       users
-        .filter(([id, sid]) => sid !== socket.id)
-        .forEach(([id, sid]) => {
-          if (!pc.current[sid]) {
-            startConnection(sid);
-          }
-        });
+      .filter(item => item[1] !== socket.id)
+      .forEach(item => {
+        const peerId = item[1];
+        if (!pc.current[peerId]) {
+          startConnection(peerId);
+        }
+      });
     }
-
+    
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
@@ -281,7 +284,7 @@ function Call() {
           autoPlay
           playsInline
           muted
-          style={{ width: 300, height: 200 }}
+          style={{ width: 300, height: 200, backgroundColor: '#000000' }}
         />
         {users
         .filter(item => item[1] !== socket.id)
@@ -291,7 +294,7 @@ function Call() {
             id={`remote-${item[1]}`}
             autoPlay 
             playsInline 
-            style={{ width: 300, height: 200 }} 
+            style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
           />
         ))}
       </div>
