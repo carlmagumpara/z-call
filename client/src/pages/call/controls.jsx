@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash } from 'react-icons/fa';
+import { socket } from '@/shared/socket';
+import { usePresence } from '@/contexts/presence';
 
-function Controls({ localStream }) {
+function Controls({ localStream, roomId }) {
+  const { user_id, username } = usePresence();
   const [audio, setAudio] = useState([]);
   const [video, setVideo] = useState([]);
 
@@ -40,6 +43,14 @@ function Controls({ localStream }) {
 
   useEffect(() => {
     console.log('send updates');
+    socket.emit("media-status", { 
+      room_id: roomId,
+      user_id,
+      data: {
+        video: true,
+        audio: false,
+      }
+    });
   }, [audio, video]);
 
   return (

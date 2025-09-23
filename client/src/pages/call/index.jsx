@@ -11,7 +11,7 @@ import Call from './call';
 
 function Room() {
   const { room_id } = useParams();
-  const { user_id, username } = usePresence();
+  const { user_id, username, setUserName } = usePresence();
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(true);
   const [settings, setSettings] = useState({
@@ -71,6 +71,8 @@ function Room() {
       initialVideo: values.video,
       initialAudio: values.audio,
     });
+    localStorage.setItem("username", values.username);
+    setUserName(values.username);
     socket.emit("join", { 
       room_id, 
       user_id,
@@ -163,9 +165,9 @@ function Room() {
     )
   }
 
-  // if(!users.length) {
-  //   return <Loading />;
-  // }
+  if(!users.length) {
+    return <Loading />;
+  }
 
   return (
     <Call

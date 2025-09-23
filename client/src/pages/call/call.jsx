@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router';
 import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
@@ -11,10 +12,12 @@ function Call({
   initialVideo = true, 
   initialAudio = true 
 }) {
+  const { room_id } = useParams();
   const { user_id, username } = usePresence();
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const [local_stream, setLocalStream] = useState(null);
+  const [mediaStatus, setMediaStatus] = useState({});
 
   useEffect(() => {
     let localStream;
@@ -235,7 +238,6 @@ function Call({
       }
     };
 
-    console.log('localStream', local_stream);
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
       setTimeout(() => {
@@ -270,6 +272,18 @@ function Call({
       }
     });
   }, [users]);
+
+  useEffect(() => {
+    const handleMediaStatus = data => {
+      console.log('handleMediaStatus', data);
+    };
+
+    socket.on("media-status", handleMediaStatus);
+
+    return () => {
+      socket.off("media-status", handleMediaStatus);
+    };
+  }, []);
 
   const remotes = users
     .filter(item => item[1] !== socket.id)
@@ -313,6 +327,7 @@ function Call({
       </div>
       {local_stream ? (
         <Controls
+          roomId={room_id}
           localStream={local_stream}
         />
       ) : null}

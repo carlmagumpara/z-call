@@ -83,12 +83,13 @@ io.on('connection', (socket) => {
   });
 
   // conference
-  socket.on("audio-status", ({ room_id, user_id, data }) => {
-    socket.to(room_id).emit("audio-status", { user_id, data });
-  });
-
-  socket.on("video-status", ({ room_id, user_id, data }) => {
-    socket.to(room_id).emit("video-status", { user_id, data });
+  socket.on("media-status", ({ room_id, user_id, data }) => {
+    // socket.to(room_id).emit("media-status", { user_id, data });
+    io.to(room_id).emit("media-status", {
+      socket_id: socket.id,
+      user_id, 
+      data 
+    });
   });
 
   // peer connection
