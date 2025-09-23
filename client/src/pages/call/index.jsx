@@ -88,7 +88,7 @@ function Call() {
         console.log("ICE restart triggered for", peerId);
       } catch (err) {
         console.error("ICE restart failed, rebuilding connection", err);
-        rebuildPeerConnection(peerId);
+        return rebuildPeerConnection(peerId); 
       }
 
       setTimeout(() => attemptReconnect(peerId, retries - 1, delay), delay);
