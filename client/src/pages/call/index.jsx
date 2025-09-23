@@ -351,6 +351,8 @@ function Call() {
     };
   }, [users, local_stream]);
 
+  console.log(remoteStreams, Object.entries(remoteStreams));
+  
   return (
     <Container>
       <video
