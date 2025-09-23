@@ -160,10 +160,12 @@ function Call() {
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
         const remoteStream = event.streams[0];
-        const videoEl = document.getElementById(`remote-${peerId}`);
-        if (videoEl) {
-          videoEl.srcObject = remoteStream
-        };
+        pc.current[peerId].remoteStream = remoteStream;
+
+        // const videoEl = document.getElementById(`remote-${peerId}`);
+        // if (videoEl) {
+        //   videoEl.srcObject = remoteStream
+        // };
       };
 
       newPc.onicecandidate = (e) => {
@@ -222,12 +224,12 @@ function Call() {
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
-
           const remoteStream = event.streams[0];
-          const videoEl = document.getElementById(`remote-${from}`);
-          if (videoEl) {
-            videoEl.srcObject = remoteStream;
-          }
+          pc.current[from].remoteStream = remoteStream;
+          // const videoEl = document.getElementById(`remote-${from}`);
+          // if (videoEl) {
+          //   videoEl.srcObject = remoteStream;
+          // }
         };
 
         conn.onicecandidate = (e) => {
@@ -342,11 +344,15 @@ function Call() {
         style={{ width: 300, height: 200, backgroundColor: '#000000' }}
       />
       {users
-      .filter(item => item[1] !== socket.id)
-      .map(item => (
+      .filter(([id, sid]) => sid !== socket.id)
+      .map(([id, sid]) => (
         <video
-          key={item[1]}
-          id={`remote-${item[1]}`}
+          key={sid}
+          ref={el => {
+            if (el && pc.current[sid]?.remoteStream) {
+              el.srcObject = pc.current[sid].remoteStream;
+            }
+          }}
           autoPlay 
           playsInline 
           style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
