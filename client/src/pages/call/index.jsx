@@ -310,15 +310,15 @@ function Call() {
     console.log('localStream', local_stream);
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
-      users
-        .filter(([id, sid]) => sid !== socket.id)
-        .forEach(([id, sid]) => {
-          if (!pc.current[sid]) {
-            setTimeout(() => {
+      setTimeout(() => {
+        users
+          .filter(([id, sid]) => sid !== socket.id)
+          .forEach(([id, sid]) => {
+            if (!pc.current[sid]) {
               startConnection(sid);
-            }, 500);
-          }
-        });
+            }
+          });
+      }, 3000);
     }
     
     socket.on("offer", handleOffer);
