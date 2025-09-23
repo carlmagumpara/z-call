@@ -42,13 +42,12 @@ function Controls({ localStream, roomId }) {
   }, []);
 
   useEffect(() => {
-    console.log('send updates');
     socket.emit("media-status", { 
       room_id: roomId,
       user_id,
       data: {
-        video: true,
-        audio: false,
+        video: video?.[0]?.enabled || false,
+        audio: audio?.[0]?.enabled || false,
       }
     });
   }, [audio, video]);

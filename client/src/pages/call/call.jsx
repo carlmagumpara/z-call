@@ -276,6 +276,11 @@ function Call({
   useEffect(() => {
     const handleMediaStatus = data => {
       console.log('handleMediaStatus', data);
+
+      setMediaStatus(prevState => ({
+        ...prevState,
+        [data.socket_id]: data.data
+      }));
     };
 
     socket.on("media-status", handleMediaStatus);
@@ -295,6 +300,7 @@ function Call({
         user_id: item[0],
         socket_id: item[1],
         username: item[2],
+        ...(mediaStatus[item[1]] ? mediaStatus[item[1]] : {})
       }
     }))
 
@@ -308,6 +314,7 @@ function Call({
         user_id,
         socket_id: socket.id,
         username,
+        ...(mediaStatus[socket.id] ? mediaStatus[socket.id] : {})
       }
     },
     ...remotes
