@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router';
-import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
@@ -38,107 +36,36 @@ const iceConfig = {
 };
 
 function Call() {
-  const { room_id } = useParams();
-  const { user_id } = usePresence();
+  const { user_id, users } = usePresence();
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const reconnectAttempts = useRef({});
   const [local_stream, setLocalStream] = useState(null);
-  const [remoteStreams, setRemoteStreams] = useState({});
-  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     let localStream;
-
     const setUpLocalStream = async () => {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(localStream);
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
-        console.log('Local video added');
       } catch (err) {
         console.error("Failed to get local stream", err);
       }
     };
-
-     setUpLocalStream();
-
-     return () => {
+    setUpLocalStream();
+    return () => {
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
-     }
+    };
   }, []);
 
   useEffect(() => {
-    Object.entries(remoteStreams).forEach(([peerId, stream]) => {
-      const videoEl = document.getElementById(`remote-${peerId}`);
-      if (videoEl) videoEl.srcObject = stream;
-    });
-  }, [remoteStreams]);
+    if (!local_stream) return;
 
-  useEffect(() => {
-    const handleJoinRoom = data => {
-      console.log('handleJoinRoom', data);
-      setUsers(prevState => ([
-        ...prevState,
-        [data.user_id, data.socket_id]
-      ]))
-    };
-
-    const handleLeftRoom = data => {
-      console.log('handleLeftRoom', data);
-      const user = users.find(item => item[0] === data.user_id);
-
-      if(user && pc.current[user[1]]) {
-        pc.current[user[1]].close();
-        delete pc.current[user[1]];
-      }
-
-      setRemoteStreams(prevState => {
-        const copy = { ...prevState };
-        delete copy[user[1]];
-        return copy;
-      });
-      
-      setUsers(prevState => prevState.filter(item => item[0] !== data.user_id));
-    };
-
-    const handleRoomUsers = data => {
-      console.log('handleRoomUsers', data);
-      setUsers(data);
-    };
-
-    const handleBeforeUnload = (event) => {
-      socket.emit("leave", { 
-        room_id,
-        user_id,
-      });
-    };
-
-    socket.on("joining", handleJoinRoom);
-    socket.on("leaving", handleLeftRoom);
-    socket.on("here", handleRoomUsers);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      socket.off("joining", handleJoinRoom);
-      socket.off("leaving", handleLeftRoom);
-      socket.off("here", handleRoomUsers);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [users]);
-
-  useEffect(() => {
-    if (local_stream) {
-      socket.emit("join", { room_id, user_id });
-    }
-  }, [local_stream, room_id, user_id]);
-
-  useEffect(() => {
     const attemptReconnect = async (peerId) => {
-      console.log('attemptReconnect', peerId);
       const conn = pc.current[peerId];
       if (!conn) return;
 
@@ -160,27 +87,22 @@ function Call() {
     };
 
     const createPeerConnection = (peerId) => {
-      console.log('createPeerConnection', peerId);
-
       if (pc.current[peerId]) return;
 
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      if(local_stream) {
-        local_stream.getTracks().forEach(track => {
-          newPc.addTrack(track, local_stream);
-        });
-      }
+      local_stream.getTracks().forEach(track => {
+        newPc.addTrack(track, local_stream);
+      });
 
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
         const remoteStream = event.streams[0];
-
-        setRemoteStreams(prevState => ({
-          ...prevState,
-          [peerId]: remoteStream
-        }));
+        const videoEl = document.getElementById(`remote-${peerId}`);
+        if (videoEl) {
+          videoEl.srcObject = remoteStream
+        };
       };
 
       newPc.onicecandidate = (e) => {
@@ -206,22 +128,17 @@ function Call() {
     };
 
     const startConnection = async (peerId) => {
-      console.log('startConnection', peerId);
       createPeerConnection(peerId);
       const conn = pc.current[peerId];
       if (!conn) return;
 
-      const offer = await conn.createOffer();
+      const offer = await conn.createOffer(); // ✅ first connect, no ICE restart
       await conn.setLocalDescription(offer);
 
-      socket.emit("offer", { 
-        to: peerId, 
-        sdp: offer 
-      });
+      socket.emit("offer", { to: peerId, sdp: offer });
     };
 
     const rebuildPeerConnection = async (peerId) => {
-      console.log('rebuildPeerConnection', peerId);
       if (pc.current[peerId]) {
         pc.current[peerId].close();
         delete pc.current[peerId];
@@ -230,25 +147,31 @@ function Call() {
       await startConnection(peerId);
     };
 
+    users
+      .filter(item => item[1] !== socket.id)
+      .forEach(item => {
+        const peerId = item[1];
+        if (socket.id < peerId && !pc.current[peerId]) {
+          startConnection(peerId);
+        }
+      });
+  }, [users, local_stream]);
+
+  useEffect(() => {
     const handleOffer = async ({ from, sdp }) => {
-      console.log('handleOffer', from);
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-
-        if(local_stream) {
-          local_stream.getTracks().forEach(track => {
-            conn.addTrack(track, local_stream);
-          });
-        }
+        local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
+
           const remoteStream = event.streams[0];
-          setRemoteStreams(prevState => ({
-            ...prevState,
-            [from]: remoteStream
-          }));
+          const videoEl = document.getElementById(`remote-${from}`);
+          if (videoEl) {
+            videoEl.srcObject = remoteStream;
+          }
         };
 
         conn.onicecandidate = (e) => {
@@ -263,6 +186,7 @@ function Call() {
       await conn.setLocalDescription(answer);
       socket.emit("answer", { to: from, sdp: answer });
 
+      // After setting remote description, process any pending candidates
       if (pendingCandidates.current[from]) {
         for (const candidate of pendingCandidates.current[from]) {
           try {
@@ -277,7 +201,6 @@ function Call() {
     };
 
     const handleAnswer = async ({ from, sdp }) => {
-      console.log('handleAnswer', from);
       const conn = pc.current[from];
       if (conn) {
         try {
@@ -288,6 +211,7 @@ function Call() {
             console.warn("Skipping answer because state is", conn.signalingState);
           }
 
+          // Process queued ICE candidates
           if (pendingCandidates.current[from]) {
             for (const candidate of pendingCandidates.current[from]) {
               try {
@@ -305,13 +229,13 @@ function Call() {
     };
 
     const handleIceCandidate = async ({ from, candidate }) => {
-      console.log('handleIceCandidate', from);
       const conn = pc.current[from];
       if (!conn) {
         console.warn("Peer connection not found for ICE candidate from:", from);
         return;
       }
       
+      // Check if remote description is set before adding the candidate
       if (conn.remoteDescription) {
         try {
           await conn.addIceCandidate(new RTCIceCandidate(candidate));
@@ -320,6 +244,7 @@ function Call() {
           console.error("Error adding ICE candidate", err);
         }
       } else {
+        // If not set, queue the candidate
         if (!pendingCandidates.current[from]) {
           pendingCandidates.current[from] = [];
         }
@@ -328,20 +253,6 @@ function Call() {
       }
     };
 
-    console.log('localStream', local_stream);
-    if (local_stream && users.length > 1) {
-      console.log('Users to connect', users);
-      setTimeout(() => {
-        users
-          .filter(([id, sid]) => sid !== socket.id)
-          .forEach(([id, sid]) => {
-            if (!pc.current[sid]) {
-              startConnection(sid);
-            }
-          });
-        }, 1000);
-    }
-    
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
@@ -351,43 +262,29 @@ function Call() {
       socket.off("answer", handleAnswer);
       socket.off("ice-candidate", handleIceCandidate);
     };
-  }, [users, local_stream]);
+  }, [local_stream]);
 
   return (
-    <Container>
-      <div className="vh-100 w-100 d-flex justify-content-center align-items-center">
+    <>
+      <video
+        id="local"
+        autoPlay
+        playsInline
+        muted
+        style={{ width: 300, height: 200 }}
+      />
+      {users
+      .filter(item => item[1] !== socket.id)
+      .map(item => (
         <video
-          id="local"
-          autoPlay
-          playsInline
-          muted
-          style={{ width: 300, height: 200, backgroundColor: '#000000' }}
+          key={item[1]}
+          id={`remote-${item[1]}`}
+          autoPlay 
+          playsInline 
+          style={{ width: 300, height: 200 }} 
         />
-        {users
-          .filter(([id, sid]) => sid !== socket.id)
-          .map(([id, sid]) => (
-            <video
-              key={sid}
-              id={`remote-${sid}`}
-              autoPlay
-              playsInline
-              style={{ width: 300, height: 200, backgroundColor: "#000" }}
-            />
-          ))}
-      </div>
-{/*      {Object.entries(remoteStreams).map(([peerId, stream]) => (
-        <video
-          key={peerId}
-          autoPlay
-          playsInline
-          ref={el => {
-            console.log(el, peerId, stream);
-            if (el) el.srcObject = stream;
-          }}
-          style={{ width: 300, height: 200, backgroundColor: "#000" }}
-        />
-      ))}*/}
-    </Container>
+      ))}
+    </>
   );
 }
 
