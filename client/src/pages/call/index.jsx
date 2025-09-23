@@ -88,6 +88,12 @@ function Call() {
         pc.current[user[1]].close();
         delete pc.current[user[1]];
       }
+
+      setRemoteStreams(prevState => {
+        const copy = { ...prevState };
+        delete copy[user[1]];
+        return copy;
+      });
       
       setUsers(prevState => prevState.filter(item => item[0] !== data.user_id));
     };
