@@ -13,8 +13,6 @@ function PresenceProvider({ children }) {
   const [user_id, setUserId] = useState(localStorage.getItem("user_id"));
   const [users, setUsers] = useState([]);
 
-  // console.log(socket);
-
   useEffect(() => {
     if(!user_id) {
       const _user_id = uuidv4();
@@ -53,9 +51,9 @@ function PresenceProvider({ children }) {
     };
   }, [user_id]);
 
-  // if(!user_id || !isConnected) {
-  //   return <Loading />;
-  // }
+  if(!user_id || !isConnected) {
+    return <Loading />;
+  }
 
   return (
     <PresenceContext.Provider

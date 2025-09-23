@@ -277,8 +277,6 @@ function Call({
     ...remotes
   ];
 
-  console.log('videos', videos);
-
   const tileSize = (idx) => {
     if (videos.length === 0) return "0%";
     if (videos.length === 1) return "50%";
@@ -310,29 +308,12 @@ function Call({
     backgroundColor: '#000000'
   });
 
-  // return (
-  //   <>
-  //     <div 
-  //       className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100"
-  //     >
-  //       {[...Array(videos).keys()].map(i => (
-  //         <div
-  //           style={tileWrapperStyle(i)}
-  //           className="d-flex justify-content-center align-items-center"
-  //         >
-  //           {i + 1}
-  //         </div>
-  //       ))}
-  //     </div>
-  //   </>
-  // );
-
-
   return (
     <Container>
       <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100">
         {videos.map((item, index) => (
           <div
+            key={index}
             style={tileWrapperStyle(index)}
             className="d-flex justify-content-center align-items-center"
           >
@@ -346,25 +327,6 @@ function Call({
             />
           </div>
         ))}
-
-{/*        <video
-          id="local"
-          autoPlay
-          playsInline
-          muted
-          style={{ width: 300, height: 200, backgroundColor: '#000000' }}
-        />
-        {users
-        .filter(item => item[1] !== socket.id)
-        .map(item => (
-          <video
-            key={item[1]}
-            id={`remote-${item[1]}`}
-            autoPlay 
-            playsInline 
-            style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
-          />
-        ))}*/}
       </div>
     </Container>
   );
