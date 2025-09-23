@@ -46,22 +46,26 @@ function Call() {
 
   useEffect(() => {
     let localStream;
+
     const setUpLocalStream = async () => {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(localStream);
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
+        console.log('Local video added');
       } catch (err) {
         console.error("Failed to get local stream", err);
       }
     };
-    setUpLocalStream();
-    return () => {
+
+     setUpLocalStream();
+
+     return () => {
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
-    };
+     }
   }, []);
 
   useEffect(() => {
@@ -92,9 +96,11 @@ function Call() {
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      local_stream.getTracks().forEach(track => {
-        newPc.addTrack(track, local_stream);
-      });
+      if(local_stream) {
+        local_stream.getTracks().forEach(track => {
+          newPc.addTrack(track, local_stream);
+        });
+      }
 
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
@@ -147,26 +153,16 @@ function Call() {
       await startConnection(peerId);
     };
 
-    if (local_stream && users.length > 1) {
-      console.log('Users to connect', users);
-      users
-        .filter(([id, sid]) => sid !== socket.id)
-        .forEach(([id, sid]) => {
-          if (!pc.current[sid]) {
-            startConnection(sid);
-          }
-        });
-    }
-
-  }, [users, local_stream]);
-
-  useEffect(() => {
-    
     const handleOffer = async ({ from, sdp }) => {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-        local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
+
+        if(local_stream) {
+          local_stream.getTracks().forEach(track => {
+            conn.addTrack(track, local_stream);
+          });
+        }
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
@@ -255,6 +251,17 @@ function Call() {
       }
     };
 
+    if (local_stream && users.length > 1) {
+      console.log('Users to connect', users);
+      users
+        .filter(([id, sid]) => sid !== socket.id)
+        .forEach(([id, sid]) => {
+          if (!pc.current[sid]) {
+            startConnection(sid);
+          }
+        });
+    }
+
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
@@ -264,7 +271,7 @@ function Call() {
       socket.off("answer", handleAnswer);
       socket.off("ice-candidate", handleIceCandidate);
     };
-  }, [local_stream]);
+  }, [users, local_stream]);
 
   return (
     <Container>
