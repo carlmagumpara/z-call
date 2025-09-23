@@ -314,7 +314,9 @@ function Call() {
         .filter(([id, sid]) => sid !== socket.id)
         .forEach(([id, sid]) => {
           if (!pc.current[sid]) {
-            startConnection(sid);
+            setTimeout(() => {
+              startConnection(sid);
+            }, 500);
           }
         });
     }
