@@ -160,7 +160,7 @@ function Room() {
                 </Col>
               </Row>
             </Form>
-         )}
+          )}
         </Formik>
       </Container>
     )
