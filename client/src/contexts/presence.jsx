@@ -53,8 +53,6 @@ function PresenceProvider({ children }) {
     };
   }, [user_id]);
 
-  console.log(user_id, isConnected)
-
   if(!user_id || !isConnected) {
     return <Loading />;
   }
