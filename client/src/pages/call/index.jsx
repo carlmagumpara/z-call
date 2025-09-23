@@ -173,11 +173,6 @@ function Call() {
           ...prevState,
           [peerId]: remoteStream
         }));
-
-        // const videoEl = document.getElementById(`remote-${peerId}`);
-        // if (videoEl) {
-        //   videoEl.srcObject = remoteStream
-        // };
       };
 
       newPc.onicecandidate = (e) => {
@@ -243,10 +238,6 @@ function Call() {
             ...prevState,
             [from]: remoteStream
           }));
-          // const videoEl = document.getElementById(`remote-${from}`);
-          // if (videoEl) {
-          //   videoEl.srcObject = remoteStream;
-          // }
         };
 
         conn.onicecandidate = (e) => {
@@ -329,15 +320,13 @@ function Call() {
     console.log('localStream', local_stream);
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
-      setTimeout(() => {
-        users
-          .filter(([id, sid]) => sid !== socket.id)
-          .forEach(([id, sid]) => {
-            if (!pc.current[sid]) {
-              startConnection(sid);
-            }
-          });
-      }, 3000);
+      users
+        .filter(([id, sid]) => sid !== socket.id)
+        .forEach(([id, sid]) => {
+          if (!pc.current[sid]) {
+            startConnection(sid);
+          }
+        });
     }
     
     socket.on("offer", handleOffer);
@@ -351,8 +340,6 @@ function Call() {
     };
   }, [users, local_stream]);
 
-  console.log(remoteStreams, Object.entries(remoteStreams));
-  
   return (
     <Container>
       <video
@@ -362,6 +349,7 @@ function Call() {
         muted
         style={{ width: 300, height: 200, backgroundColor: '#000000' }}
       />
+
       {Object.entries(remoteStreams).map(([peerId, stream]) => (
         <video
           key={peerId}
@@ -374,23 +362,21 @@ function Call() {
         />
       ))}
 
+      <p>Whattt</p>
 
-
-{/*      {users
+      {users
       .filter(([id, sid]) => sid !== socket.id)
       .map(([id, sid]) => (
         <video
           key={sid}
           ref={el => {
-            if (el && pc.current[sid]?.remoteStream) {
-              el.srcObject = pc.current[sid].remoteStream;
-            }
+            if (el) el.srcObject = remoteStreams[sid];
           }}
           autoPlay 
           playsInline 
           style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
         />
-      ))}*/}
+      ))}
     </Container>
   );
 }
