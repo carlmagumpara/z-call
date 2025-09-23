@@ -42,6 +42,7 @@ function Call() {
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const [local_stream, setLocalStream] = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState({});
 
   useEffect(() => {
     let localStream;
@@ -67,7 +68,7 @@ function Call() {
   }, []);
 
   useEffect(() => {
-    const attemptReconnect = async (peerId, retries = 3, delay = 1000) => {
+    const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
       console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`);
 
       const conn = pc.current[peerId];
@@ -110,11 +111,17 @@ function Call() {
 
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
+
         const remoteStream = event.streams[0];
         const videoEl = document.getElementById(`remote-${peerId}`);
         if (videoEl) {
           videoEl.srcObject = remoteStream
         };
+
+        setRemoteStreams(prevState => ({
+          ...prevState,
+          [peerId]: remoteStream
+        }));
       };
 
       newPc.onicecandidate = (e) => {
@@ -178,6 +185,11 @@ function Call() {
           if (videoEl) {
             videoEl.srcObject = remoteStream;
           }
+
+          setRemoteStreams(prevState => ({
+            ...prevState,
+            [from]: remoteStream
+          }));
         };
 
         conn.onicecandidate = (e) => {
@@ -291,7 +303,20 @@ function Call() {
           muted
           style={{ width: 300, height: 200, backgroundColor: '#000000' }}
         />
-        {users
+        {Object.entries(remoteStreams).map(([peerId, stream]) => (
+          <video
+            key={peerId}
+            autoPlay
+            playsInline
+            ref={el => {
+              console.log(el, peerId, stream);
+              if (el) el.srcObject = stream;
+            }}
+            style={{ width: 300, height: 200, backgroundColor: "#000" }}
+          />
+        ))}
+
+{/*        {users
         .filter(item => item[1] !== socket.id)
         .map(item => (
           <video
@@ -301,7 +326,7 @@ function Call() {
             playsInline 
             style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
           />
-        ))}
+        ))}*/}
       </div>
     </Container>
   );
