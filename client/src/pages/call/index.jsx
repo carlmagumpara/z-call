@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
@@ -37,32 +38,61 @@ const iceConfig = {
 };
 
 function Call() {
-  const { user_id, users } = usePresence();
+  const { room_id } = useParams();
+  const { user_id } = usePresence();
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const reconnectAttempts = useRef({});
   const [local_stream, setLocalStream] = useState(null);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    let localStream;
-    const setUpLocalStream = async () => {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        setLocalStream(localStream);
-        const videoEl = document.getElementById("local");
-        if (videoEl) videoEl.srcObject = localStream;
-        console.log('Local video added');
-      } catch (err) {
-        console.error("Failed to get local stream", err);
-      }
+    // let localStream;
+    // const setUpLocalStream = async () => {
+    //   try {
+    //     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    //     setLocalStream(localStream);
+    //     const videoEl = document.getElementById("local");
+    //     if (videoEl) videoEl.srcObject = localStream;
+    //     console.log('Local video added');
+    //   } catch (err) {
+    //     console.error("Failed to get local stream", err);
+    //   }
+    // };
+
+    // setUpLocalStream();
+    
+    // return () => {
+    //   if (localStream) {
+    //     localStream.getTracks().forEach(track => track.stop());
+    //   }
+    // };
+
+    socket.emit("join-room", { 
+      room_id,
+      user_id,
+    });
+
+    const handleJoinRoom = data => {
+      console.log('handleJoinRoom', data);
     };
 
-    setUpLocalStream();
+    const handleLeftRoom = data => {
+      console.log('handleLeftRoom', data);
+    };
+
+    const handleRoomUsers = data => {
+      console.log('handleRoomUsers', data);
+    };
+
+    socket.on("join-room", handleJoinRoom);
+    socket.on("left-room", handleLeftRoom);
+    socket.on("room-users", handleRoomUsers);
     
     return () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
+      socket.off("offer", handleJoinRoom);
+      socket.off("answer", handleLeftRoom);
+      socket.off("ice-candidate", handleRoomUsers);
     };
   }, []);
 
@@ -138,7 +168,7 @@ function Call() {
       const conn = pc.current[peerId];
       if (!conn) return;
 
-      const offer = await conn.createOffer(); // ✅ first connect, no ICE restart
+      const offer = await conn.createOffer();
       await conn.setLocalDescription(offer);
 
       socket.emit("offer", { 
@@ -186,7 +216,6 @@ function Call() {
       await conn.setLocalDescription(answer);
       socket.emit("answer", { to: from, sdp: answer });
 
-      // After setting remote description, process any pending candidates
       if (pendingCandidates.current[from]) {
         for (const candidate of pendingCandidates.current[from]) {
           try {
@@ -212,7 +241,6 @@ function Call() {
             console.warn("Skipping answer because state is", conn.signalingState);
           }
 
-          // Process queued ICE candidates
           if (pendingCandidates.current[from]) {
             for (const candidate of pendingCandidates.current[from]) {
               try {
@@ -237,7 +265,6 @@ function Call() {
         return;
       }
       
-      // Check if remote description is set before adding the candidate
       if (conn.remoteDescription) {
         try {
           await conn.addIceCandidate(new RTCIceCandidate(candidate));
@@ -246,7 +273,6 @@ function Call() {
           console.error("Error adding ICE candidate", err);
         }
       } else {
-        // If not set, queue the candidate
         if (!pendingCandidates.current[from]) {
           pendingCandidates.current[from] = [];
         }
@@ -254,10 +280,6 @@ function Call() {
         console.log("Queued ICE candidate from:", from);
       }
     };
-
-    socket.on("offer", handleOffer);
-    socket.on("answer", handleAnswer);
-    socket.on("ice-candidate", handleIceCandidate);
 
     console.log('localStream', local_stream);
     if (local_stream && users.length > 1) {
@@ -272,6 +294,10 @@ function Call() {
       });
     }
     
+    socket.on("offer", handleOffer);
+    socket.on("answer", handleAnswer);
+    socket.on("ice-candidate", handleIceCandidate);
+
     return () => {
       socket.off("offer", handleOffer);
       socket.off("answer", handleAnswer);

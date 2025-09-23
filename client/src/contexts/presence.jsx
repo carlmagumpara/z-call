@@ -13,6 +13,8 @@ function PresenceProvider({ children }) {
   const [user_id, setUserId] = useState(localStorage.getItem("user_id"));
   const [users, setUsers] = useState([]);
 
+  // console.log(socket);
+
   useEffect(() => {
     if(!user_id) {
       const _user_id = uuidv4();
@@ -23,6 +25,7 @@ function PresenceProvider({ children }) {
     }
 
     const onConnect = () => {
+      console.log('onConnect');
       socket.emit("user_online", {
         user_id
       });
@@ -30,10 +33,12 @@ function PresenceProvider({ children }) {
     };
 
     const onDisconnect = () => {
+      console.log('onDisconnect');
       setIsConnected(false);
     };
 
     const onUpdateUsers = (value) => {
+      console.log('onUpdateUsers');
       setUsers(value);
     };
 
@@ -47,6 +52,8 @@ function PresenceProvider({ children }) {
       socket.off('update_users', onUpdateUsers);
     };
   }, [user_id]);
+
+  console.log(user_id, isConnected)
 
   if(!user_id || !isConnected) {
     return <Loading />;

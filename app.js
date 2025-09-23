@@ -51,7 +51,6 @@ io.on('connection', (socket) => {
       user_id,
       socket_id: socket.id
     });
-    socket.data.username = username;
     socket.data.user_id = user_id;
     
     const clients = io.sockets.adapter.rooms.get(room_id);
@@ -70,7 +69,7 @@ io.on('connection', (socket) => {
   socket.on("left-room", ({ room_id, user_id }) => {
     console.log(`${user_id} left room: ${room_id}`);
     socket.leave(room_id);
-    socket.to(room_id).emit("left", { user_id });
+    socket.to(room_id).emit("left-room", { user_id });
   });
 
   socket.on("offer", (data) => {
