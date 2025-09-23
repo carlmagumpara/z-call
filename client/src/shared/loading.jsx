@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image } from 'react-bootstrap';
 import { BarLoader } from 'react-spinners';
-import DataTransfer from '@/assets/data-transfer.gif';
+import Cat from '@/assets/cat.gif';
 
 function LoaderFull() {
   return (
@@ -12,7 +12,7 @@ function LoaderFull() {
         className="d-flex flex-column align-items-center"
       >
         <Image
-          src={DataTransfer}
+          src={Cat}
         />
       </div>
     </div>
