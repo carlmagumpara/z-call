@@ -1,5 +1,7 @@
 function Video({ index, item, count }) {
 
+  console.log('video', item);
+
   const tileSize = (idx) => {
     if (count === 0) return "0%";
     if (count === 1) return "50%";
