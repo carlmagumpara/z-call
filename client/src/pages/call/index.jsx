@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
+import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
@@ -265,26 +267,28 @@ function Call() {
   }, [local_stream]);
 
   return (
-    <>
-      <video
-        id="local"
-        autoPlay
-        playsInline
-        muted
-        style={{ width: 300, height: 200 }}
-      />
-      {users
-      .filter(item => item[1] !== socket.id)
-      .map(item => (
+    <Container>
+      <div className="vh-100 w-100 d-flex justify-content-center align-items-center">
         <video
-          key={item[1]}
-          id={`remote-${item[1]}`}
-          autoPlay 
-          playsInline 
-          style={{ width: 300, height: 200 }} 
+          id="local"
+          autoPlay
+          playsInline
+          muted
+          style={{ width: 300, height: 200 }}
         />
-      ))}
-    </>
+        {users
+        .filter(item => item[1] !== socket.id)
+        .map(item => (
+          <video
+            key={item[1]}
+            id={`remote-${item[1]}`}
+            autoPlay 
+            playsInline 
+            style={{ width: 300, height: 200 }} 
+          />
+        ))}
+      </div>
+    </Container>
   );
 }
 
