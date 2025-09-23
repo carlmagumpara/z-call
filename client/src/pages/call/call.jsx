@@ -229,18 +229,13 @@ function Call({
     };
 
     console.log('localStream', local_stream);
-    // if (local_stream && users.length > 1) {
-    if (local_stream) {
+    if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
-      users
-      .filter(item => item[1] !== socket.id)
-      .forEach(item => {
-        const peerId = item[1];
-        startConnection(peerId);
-        // if (!pc.current[peerId]) {
-        //   startConnection(peerId);
-        // }
-      });
+      setTimeout(() => {
+        users
+        .filter(item => item[1] !== socket.id)
+        .forEach(item => startConnection(item[1]));
+      }, 3000);
     }
     
     socket.on("offer", handleOffer);

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
+import Loading from '@/shared/loading';
 import Call from './call';
 
 function Room() {
   const { room_id } = useParams();
   const { user_id } = usePresence();
   const [users, setUsers] = useState([]);
-  const [is_joined, setIsJoined] = useState(false);
 
   useEffect(() => {
     socket.emit("join", { 
@@ -53,6 +53,10 @@ function Room() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [room_id, user_id]);
+
+  if(!users.length) {
+    return <Loading />;
+  }
 
   return (
     <Call
