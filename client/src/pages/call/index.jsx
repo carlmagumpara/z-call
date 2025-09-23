@@ -160,14 +160,15 @@ function Call() {
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      local_stream.getTracks().forEach(track => {
-        newPc.addTrack(track, local_stream);
-      });
+      if(local_stream) {
+        local_stream.getTracks().forEach(track => {
+          newPc.addTrack(track, local_stream);
+        });
+      }
 
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
         const remoteStream = event.streams[0];
-        pc.current[peerId].remoteStream = remoteStream;
 
         setRemoteStreams(prevState => ({
           ...prevState,
@@ -227,13 +228,16 @@ function Call() {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-        local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
+
+        if(local_stream) {
+          local_stream.getTracks().forEach(track => {
+            conn.addTrack(track, local_stream);
+          });
+        }
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
           const remoteStream = event.streams[0];
-          pc.current[from].remoteStream = remoteStream;
-
           setRemoteStreams(prevState => ({
             ...prevState,
             [from]: remoteStream
