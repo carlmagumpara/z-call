@@ -7,7 +7,7 @@ import { useGlobalModal, MODAL_TYPES } from '@/contexts/global-modal';
 
 function Navigation() {
   const { handleShow } = useGlobalModal();
-  const { user_id } = usePresence();
+  const { username } = usePresence();
 
   return (
     <Navbar
@@ -39,17 +39,17 @@ function Navigation() {
               title={
                 <>
                   <Avatar 
-                    name={user_id}
+                    name={username ?? ''}
                     size={30}
                     variant="beam"
                   />
-                  <span className="ms-2">{user_id}</span>
+                  <span className="ms-2">{username}</span>
                 </>
               }
               align="end"
             >
               <NavDropdown.Item
-                onClick={() => {}}
+                onClick={() => handleShow(MODAL_TYPES.SETTINGS)}
               >
                 Settings
               </NavDropdown.Item>

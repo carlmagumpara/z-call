@@ -2,6 +2,7 @@ import { createContext, useContext, useState, Suspense, useEffect, lazy } from '
 const Context = createContext();
 
 const MODAL_COMPONENTS = {
+  SETTINGS: lazy(() => import('./modals/settings')),
 };
 
 export const MODAL_TYPES = Object.keys(MODAL_COMPONENTS).reduce((acc, key) => {

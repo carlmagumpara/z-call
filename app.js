@@ -36,7 +36,7 @@ app.get(/(.*)/, (req, res, next) => {
 io.on('connection', (socket) => {
   console.log("User connected:", socket.id);
 
-  // global
+  // global presence
   socket.on("user_online", async ({ user_id, username }) => {
     onlineUsers.set(user_id, { 
       socket_id: socket.id, 
@@ -46,7 +46,7 @@ io.on('connection', (socket) => {
     io.emit("update_users", Array.from(onlineUsers.entries()));
   });
 
-  // room
+  // room presence
   socket.on("join", async ({ room_id, user_id, username }) => {
     console.log(`${user_id} join room: ${room_id}`);
     socket.join(room_id);
@@ -72,6 +72,7 @@ io.on('connection', (socket) => {
     }
 
     socket.emit("here", users);
+    socket.emit("joined");
   });
 
   socket.on("leave", ({ room_id, user_id }) => {
@@ -80,6 +81,24 @@ io.on('connection', (socket) => {
     socket.to(room_id).emit("leaving", { user_id });
   });
 
+  // conference
+  socket.on("mute", ({ room_id, user_id }) => {
+    socket.to(room_id).emit("muted", { user_id });
+  });
+
+  socket.on("unmute", ({ room_id, user_id }) => {
+    socket.to(room_id).emit("unmuted", { user_id });
+  });
+
+  socket.on("video-on", ({ room_id, user_id }) => {
+    socket.to(room_id).emit("video-on", { user_id });
+  });
+
+  socket.on("video-off", ({ room_id, user_id }) => {
+    socket.to(room_id).emit("video-off", { user_id });
+  });
+
+  // peer connection
   socket.on("offer", (data) => {
     socket.to(data.to).emit("offer", { 
       from: socket.id, 

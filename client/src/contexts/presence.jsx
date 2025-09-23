@@ -9,16 +9,22 @@ const PresenceContext = createContext();
 export const usePresence = () => useContext(PresenceContext);
 
 function PresenceProvider({ children }) {
-  const [isConnected, setIsConnected] = useState(socket.connected);
+  const [is_connected, setIsConnected] = useState(socket.connected);
   const [user_id, setUserId] = useState(localStorage.getItem("user_id"));
+  const [username, setUserName] = useState(localStorage.getItem("username"));
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    if(!user_id) {
+    if(!user_id || !username) {
       const _user_id = uuidv4();
+      const _username = `${generateName()}_${Math.floor(Math.random() * 1000)}`.replace(/ /g,"_");
+
       localStorage.setItem("user_id", _user_id);
+      localStorage.setItem("username", _username);
 
       setUserId(_user_id);
+      setUserName(_username);
+
       return;
     }
 
@@ -51,7 +57,7 @@ function PresenceProvider({ children }) {
     };
   }, [user_id]);
 
-  if(!user_id || !isConnected) {
+  if(!username || !user_id || !is_connected) {
     return <Loading />;
   }
 
@@ -59,6 +65,8 @@ function PresenceProvider({ children }) {
     <PresenceContext.Provider
       value={{
         user_id,
+        username,
+        setUserName,
         users,
       }}
     >

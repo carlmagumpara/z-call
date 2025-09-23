@@ -3,6 +3,8 @@ import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
 
+import Video from './video';
+
 function Call({ 
   users = [], 
   video = true, 
@@ -257,7 +259,6 @@ function Call({
         pc.current[sid].close();
         delete pc.current[sid];
       } else {
-        // to make sure no empty videos
         const videoEl = document.getElementById(`remote-${sid}`);
         if (videoEl) {
           videoEl.srcObject = pc.current[sid].remoteStream;
@@ -284,55 +285,16 @@ function Call({
     ...remotes
   ];
 
-  const tileSize = (idx) => {
-    if (videos.length === 0) return "0%";
-    if (videos.length === 1) return "50%";
-    if (videos.length === 2) return "49%";
-    if (videos.length === 3) return idx === 2 ? "98%" : "49%";
-    if (videos.length === 4) return "49%";
-    if (videos.length === 5) return idx < 2 ? "48%" : "32%";
-    return "32%";
-  };
-
-  const tileHeight = () => {
-    if (videos.length === 1) {
-      return "50vh"
-    };
-    if (videos.length <= 6) {
-      return "50vh"
-    };
-    return "calc(100vh / 3)";
-  };
-
-  const tileWrapperStyle = (idx) => ({
-    flex: `0 0 ${tileSize(idx)}`,
-    maxWidth: tileSize(idx),
-    minWidth: 120,
-    display: "flex",
-    alignItems: "stretch",
-    justifyContent: "center",
-    height: tileHeight(),
-    backgroundColor: '#000000'
-  });
-
   return (
     <Container>
-      <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100">
+      <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100 gap-3">
         {videos.map((item, index) => (
-          <div
+          <Video 
             key={index}
-            style={tileWrapperStyle(index)}
-            className="d-flex justify-content-center align-items-center rounded"
-          >
-            <video
-              {...item}
-              style={{
-                width: '100%',
-                height: '100%',
-              }}
-              className="object-fit-cover"
-            />
-          </div>
+            index={index}
+            item={item}
+            count={videos.length}
+          />
         ))}
       </div>
     </Container>
