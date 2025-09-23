@@ -70,7 +70,7 @@ function Call() {
     const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
       console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`);
       const conn = pc.current[peerId];
-      const state = conn?.connectionState;
+      const state = conn?.iceConnectionState;
 
       if (!conn || ["closed", "disconnected", "failed"].includes(state)) {
         return rebuildPeerConnection(peerId);
@@ -91,9 +91,7 @@ function Call() {
         rebuildPeerConnection(peerId);
       }
 
-      setTimeout(() => {
-        attemptReconnect(peerId, retries - 1, delay);
-      }, delay);
+      setTimeout(() => attemptReconnect(peerId, retries - 1, delay), delay);
     };
 
     const createPeerConnection = (peerId) => {
