@@ -275,8 +275,6 @@ function Call({
 
   useEffect(() => {
     const handleMediaStatus = data => {
-      console.log('handleMediaStatus', data);
-
       setMediaStatus(prevState => ({
         ...prevState,
         [data.socket_id]: data.data

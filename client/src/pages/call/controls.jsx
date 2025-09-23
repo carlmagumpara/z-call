@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from 'react-bootstrap';
-import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash } from 'react-icons/fa';
+import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaEllipsisV } from 'react-icons/fa';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 
@@ -77,6 +77,12 @@ function Controls({ localStream, roomId }) {
           onClick={() => {}}
         >
           <FaPhoneSlash />
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {}}
+        >
+          <FaEllipsisV />
         </Button>
       </div>
     </div>

@@ -48,7 +48,7 @@ function Video({ index, item, count }) {
         className="object-fit-cover rounded"
       />
       <div 
-        className="position-absolute p-2 w-100 d-flex justify-content-center align-items-center"
+        className="position-absolute p-3 w-100 d-flex justify-content-between align-items-center"
         style={{
           left: 0,
           bottom: 0,
