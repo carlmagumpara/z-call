@@ -300,7 +300,10 @@ function Call({
         user_id: item[0],
         socket_id: item[1],
         username: item[2],
-        ...(mediaStatus[item[1]] ? mediaStatus[item[1]] : {})
+      },
+      media: mediaStatus[item[1]] ? mediaStatus[item[1]] : {
+        audio: false,
+        video: false,
       }
     }))
 
@@ -314,7 +317,10 @@ function Call({
         user_id,
         socket_id: socket.id,
         username,
-        ...(mediaStatus[socket.id] ? mediaStatus[socket.id] : {})
+      },
+      media: mediaStatus[socket.id] ? mediaStatus[socket.id] : {
+        audio: false,
+        video: false,
       }
     },
     ...remotes

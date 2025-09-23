@@ -1,6 +1,6 @@
-function Video({ index, item, count }) {
+import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash } from 'react-icons/fa';
 
-  console.log('video', item);
+function Video({ index, item, count }) {
 
   const tileSize = (idx) => {
     if (count === 0) return "0%";
@@ -48,13 +48,17 @@ function Video({ index, item, count }) {
         className="object-fit-cover rounded"
       />
       <div 
-        className="position-absolute p-2"
+        className="position-absolute p-2 w-100 d-flex justify-content-center align-items-center"
         style={{
           left: 0,
           bottom: 0,
         }}
      >
         <p className="text-white mb-0">{item.user?.username}</p>
+        <p className="text-white mb-0 d-flex justify-content-center align-items-center gap-3">
+          {item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />} 
+          {item.media?.video ? <FaVideo /> : <FaVideoSlash />}
+        </p>
       </div>
     </div>
   )
