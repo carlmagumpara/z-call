@@ -349,32 +349,16 @@ function Call() {
         muted
         style={{ width: 300, height: 200, backgroundColor: '#000000' }}
       />
-
       {Object.entries(remoteStreams).map(([peerId, stream]) => (
         <video
           key={peerId}
           autoPlay
           playsInline
           ref={el => {
+            console.log(el, peerId, stream);
             if (el) el.srcObject = stream;
           }}
           style={{ width: 300, height: 200, backgroundColor: "#000" }}
-        />
-      ))}
-
-      <p>Whattt</p>
-
-      {users
-      .filter(([id, sid]) => sid !== socket.id)
-      .map(([id, sid]) => (
-        <video
-          key={sid}
-          ref={el => {
-            if (el) el.srcObject = remoteStreams[sid];
-          }}
-          autoPlay 
-          playsInline 
-          style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
         />
       ))}
     </Container>
