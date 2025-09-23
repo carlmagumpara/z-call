@@ -86,6 +86,7 @@ function Call({
         if (videoEl) {
           videoEl.srcObject = remoteStream
         };
+        pc.current[peerId].remoteStream = remoteStream;
       };
 
       newPc.onicecandidate = (e) => {
@@ -143,12 +144,12 @@ function Call({
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
-
           const remoteStream = event.streams[0];
           const videoEl = document.getElementById(`remote-${from}`);
           if (videoEl) {
             videoEl.srcObject = remoteStream;
           }
+          pc.current[from].remoteStream = remoteStream;
         };
 
         conn.onicecandidate = (e) => {
@@ -255,6 +256,12 @@ function Call({
       if (!user) {
         pc.current[sid].close();
         delete pc.current[sid];
+      } else {
+        // to make sure no empty videos
+        const videoEl = document.getElementById(`remote-${sid}`);
+        if (videoEl) {
+          videoEl.srcObject = pc.current[sid].remoteStream;
+        }
       }
     });
   }, [users]);
