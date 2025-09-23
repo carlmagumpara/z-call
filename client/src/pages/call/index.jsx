@@ -47,38 +47,36 @@ function Call() {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    // let localStream;
-    // const setUpLocalStream = async () => {
-    //   try {
-    //     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    //     setLocalStream(localStream);
-    //     const videoEl = document.getElementById("local");
-    //     if (videoEl) videoEl.srcObject = localStream;
-    //     console.log('Local video added');
-    //   } catch (err) {
-    //     console.error("Failed to get local stream", err);
-    //   }
-    // };
-
-    // setUpLocalStream();
-    
-    // return () => {
-    //   if (localStream) {
-    //     localStream.getTracks().forEach(track => track.stop());
-    //   }
-    // };
+    let localStream;
 
     socket.emit("join", { 
       room_id,
       user_id,
     });
 
+    const setUpLocalStream = async () => {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        setLocalStream(localStream);
+        const videoEl = document.getElementById("local");
+        if (videoEl) videoEl.srcObject = localStream;
+        console.log('Local video added');
+      } catch (err) {
+        console.error("Failed to get local stream", err);
+      }
+    };
+
     const handleJoinRoom = data => {
       console.log('handleJoinRoom', data);
+      setUsers(prevState => ([
+        ...prevState,
+        [data.user_id, data.socket_id]
+      ]))
     };
 
     const handleLeftRoom = data => {
       console.log('handleLeftRoom', data);
+      setUsers(prevState => prevState.filter(item => item[0] !== data.user_id));
     };
 
     const handleRoomUsers = data => {
@@ -93,6 +91,8 @@ function Call() {
       });
     };
 
+    setUpLocalStream();
+
     socket.on("joining", handleJoinRoom);
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
@@ -103,6 +103,9 @@ function Call() {
       socket.off("leaving", handleLeftRoom);
       socket.off("here", handleRoomUsers);
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
 
