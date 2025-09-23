@@ -36,10 +36,41 @@ app.get(/(.*)/, (req, res, next) => {
 io.on('connection', (socket) => {
   console.log("User connected:", socket.id);
 
+  // global
   socket.on("user_online", async ({ user_id }) => {
     onlineUsers.set(user_id, socket.id);
     console.log(`${user_id} is online`);
     io.emit("update_users", Array.from(onlineUsers.entries()));
+  });
+
+  // room
+  socket.on("join-room", async ({ room_id, user_id }) => {
+    console.log(`${user_id} join room: ${room_id}`);
+    socket.join(room_id);
+    socket.to(room_id).emit("joined", {
+      user_id,
+      socket_id: socket.id
+    });
+    socket.data.username = username;
+    socket.data.user_id = user_id;
+    
+    const clients = io.sockets.adapter.rooms.get(room_id);
+    const users = [];
+
+    if (clients) {
+      for (const clientId of clients) {
+        const clientSocket = io.sockets.sockets.get(clientId);
+        users.push([clientSocket.data.user_id, clientId]);
+      }
+    }
+
+    io.to(room_id).emit("room-users", users);
+  });
+
+  socket.on("left-room", ({ room_id, user_id }) => {
+    console.log(`${user_id} left room: ${room_id}`);
+    socket.leave(room_id);
+    socket.to(room_id).emit("left", { user_id });
   });
 
   socket.on("offer", (data) => {
