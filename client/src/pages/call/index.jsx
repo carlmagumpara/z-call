@@ -65,8 +65,6 @@ function Call() {
   }, []);
 
   useEffect(() => {
-    if (!local_stream) return;
-
     const attemptReconnect = async (peerId) => {
       const conn = pc.current[peerId];
       if (!conn) return;
@@ -134,7 +132,7 @@ function Call() {
       const conn = pc.current[peerId];
       if (!conn) return;
 
-      const offer = await conn.createOffer(); // ✅ first connect, no ICE restart
+      const offer = await conn.createOffer();
       await conn.setLocalDescription(offer);
 
       socket.emit("offer", { to: peerId, sdp: offer });
@@ -149,17 +147,21 @@ function Call() {
       await startConnection(peerId);
     };
 
-    users
-      .filter(item => item[1] !== socket.id)
-      .forEach(item => {
-        const peerId = item[1];
-        if (socket.id < peerId && !pc.current[peerId]) {
-          startConnection(peerId);
-        }
-      });
+    if (local_stream && users.length > 1) {
+      console.log('Users to connect', users);
+      users
+        .filter(([id, sid]) => sid !== socket.id)
+        .forEach(([id, sid]) => {
+          if (!pc.current[sid]) {
+            startConnection(sid);
+          }
+        });
+    }
+
   }, [users, local_stream]);
 
   useEffect(() => {
+    
     const handleOffer = async ({ from, sdp }) => {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
@@ -188,7 +190,6 @@ function Call() {
       await conn.setLocalDescription(answer);
       socket.emit("answer", { to: from, sdp: answer });
 
-      // After setting remote description, process any pending candidates
       if (pendingCandidates.current[from]) {
         for (const candidate of pendingCandidates.current[from]) {
           try {
@@ -213,7 +214,6 @@ function Call() {
             console.warn("Skipping answer because state is", conn.signalingState);
           }
 
-          // Process queued ICE candidates
           if (pendingCandidates.current[from]) {
             for (const candidate of pendingCandidates.current[from]) {
               try {
@@ -237,7 +237,6 @@ function Call() {
         return;
       }
       
-      // Check if remote description is set before adding the candidate
       if (conn.remoteDescription) {
         try {
           await conn.addIceCandidate(new RTCIceCandidate(candidate));
@@ -246,7 +245,6 @@ function Call() {
           console.error("Error adding ICE candidate", err);
         }
       } else {
-        // If not set, queue the candidate
         if (!pendingCandidates.current[from]) {
           pendingCandidates.current[from] = [];
         }
