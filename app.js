@@ -8,10 +8,13 @@ import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const env = process.env.NODE_ENV || "development";
+const port = process.env.PORT || 4000;
+
 const corsConfig = {
   origin: ["http://localhost:5173", "http://localhost:4000"],
   methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
+  credentials: env !== 'development',
 };
 
 const app = express();
@@ -19,8 +22,6 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: corsConfig
 });
-
-const port = process.env.PORT || 4000;
 
 let onlineUsers = new Map();
 
@@ -82,20 +83,12 @@ io.on('connection', (socket) => {
   });
 
   // conference
-  socket.on("mute", ({ room_id, user_id }) => {
-    socket.to(room_id).emit("muted", { user_id });
+  socket.on("audio-status", ({ room_id, user_id, data }) => {
+    socket.to(room_id).emit("audio-status", { user_id, data });
   });
 
-  socket.on("unmute", ({ room_id, user_id }) => {
-    socket.to(room_id).emit("unmuted", { user_id });
-  });
-
-  socket.on("video-on", ({ room_id, user_id }) => {
-    socket.to(room_id).emit("video-on", { user_id });
-  });
-
-  socket.on("video-off", ({ room_id, user_id }) => {
-    socket.to(room_id).emit("video-off", { user_id });
+  socket.on("video-status", ({ room_id, user_id, data }) => {
+    socket.to(room_id).emit("video-status", { user_id, data });
   });
 
   // peer connection

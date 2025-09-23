@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { Container } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
+import { usePresence } from '@/contexts/presence';
 import { iceConfig } from './config';
-
 import Video from './video';
+import Controls from './controls';
 
 function Call({ 
   users = [], 
-  video = true, 
-  audio = true 
+  initialVideo = true, 
+  initialAudio = true 
 }) {
+  const { user_id, username } = usePresence();
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const [local_stream, setLocalStream] = useState(null);
@@ -19,9 +21,11 @@ function Call({
     const setUpLocalStream = async () => {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ 
-          video, 
-          audio 
+          video: true,
+          audio: true,
         });
+        localStream.getVideoTracks().forEach(track => track.enabled = initialVideo);
+        localStream.getAudioTracks().forEach(track => track.enabled = initialAudio);
         setLocalStream(localStream);
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
@@ -38,7 +42,7 @@ function Call({
         localStream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [initialVideo, initialAudio]);
 
   useEffect(() => {
     const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
@@ -273,6 +277,11 @@ function Call({
       id: `remote-${item[1]}`,
       autoPlay: true,
       playsInline: true,
+      user: {
+        user_id: item[0],
+        socket_id: item[1],
+        username: item[2],
+      }
     }))
 
   const videos = [
@@ -281,12 +290,17 @@ function Call({
       autoPlay: true,
       playsInline: true,
       muted: true,
+      user: {
+        user_id,
+        socket_id: socket.id,
+        username,
+      }
     },
     ...remotes
   ];
 
   return (
-    <Container>
+    <>
       <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100 gap-3">
         {videos.map((item, index) => (
           <Video 
@@ -297,7 +311,12 @@ function Call({
           />
         ))}
       </div>
-    </Container>
+      {local_stream ? (
+        <Controls
+          localStream={local_stream}
+        />
+      ) : null}
+    </>
   );
 }
 

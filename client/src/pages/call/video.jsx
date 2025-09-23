@@ -35,7 +35,7 @@ function Video({ index, item, count }) {
     <div
       key={index}
       style={tileWrapperStyle(index)}
-      className="rounded"
+      className="rounded position-relative"
     >
       <video
         {...item}
@@ -45,6 +45,15 @@ function Video({ index, item, count }) {
         }}
         className="object-fit-cover rounded"
       />
+      <div 
+        className="position-absolute p-2"
+        style={{
+          left: 0,
+          bottom: 0,
+        }}
+     >
+        <p className="text-white mb-0">{item.user?.username}</p>
+      </div>
     </div>
   )
 }

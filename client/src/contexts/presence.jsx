@@ -15,6 +15,10 @@ function PresenceProvider({ children }) {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
+    setIsConnected(socket.connected);
+  }, [socket]);
+
+  useEffect(() => {
     if(!user_id || !username) {
       const _user_id = uuidv4();
       const _username = `${generateName()}_${Math.floor(Math.random() * 1000)}`.replace(/ /g,"_");
@@ -57,7 +61,7 @@ function PresenceProvider({ children }) {
     };
   }, [user_id]);
 
-  if(!username || !user_id || !is_connected) {
+  if (!username || !user_id || !is_connected) {
     return <Loading />;
   }
 
