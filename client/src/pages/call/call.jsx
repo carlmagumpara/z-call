@@ -322,7 +322,7 @@ function Call({
           <div
             key={index}
             style={tileWrapperStyle(index)}
-            className="d-flex justify-content-center align-items-center"
+            className="d-flex justify-content-center align-items-center rounded"
           >
             <video
               {...item}
@@ -330,7 +330,7 @@ function Call({
                 width: '100%',
                 height: '100%',
               }}
-              className="object-fit-contain"
+              className="object-fit-cover"
             />
           </div>
         ))}
