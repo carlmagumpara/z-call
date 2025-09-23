@@ -65,12 +65,12 @@ function Controls({ localStream, roomId }) {
         <Button
           onClick={() => setTrackEnabled("audio", !audio[0]?.enabled)}
         >
-          {audio[0]?.enabled ? <FaMicrophoneSlash /> : <FaMicrophone />}
+          {audio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
         </Button>
         <Button
           onClick={() => setTrackEnabled("video", !video[0]?.enabled)}
         >
-          {video[0]?.enabled ? <FaVideoSlash /> :<FaVideo />}
+          {video[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
         </Button>
         <Button
           variant="danger"
