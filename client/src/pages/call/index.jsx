@@ -49,11 +49,6 @@ function Call() {
   useEffect(() => {
     let localStream;
 
-    socket.emit("join", { 
-      room_id,
-      user_id,
-    });
-
     const setUpLocalStream = async () => {
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -61,11 +56,26 @@ function Call() {
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
         console.log('Local video added');
+
+        socket.emit("join", { 
+          room_id,
+          user_id,
+        });
       } catch (err) {
         console.error("Failed to get local stream", err);
       }
     };
 
+     setUpLocalStream();
+
+     return () => {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+     }
+  }, []);
+
+  useEffect(() => {
     const handleJoinRoom = data => {
       console.log('handleJoinRoom', data);
       setUsers(prevState => ([
@@ -91,8 +101,6 @@ function Call() {
       });
     };
 
-    setUpLocalStream();
-
     socket.on("joining", handleJoinRoom);
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
@@ -102,10 +110,7 @@ function Call() {
       socket.off("joining", handleJoinRoom);
       socket.off("leaving", handleLeftRoom);
       socket.off("here", handleRoomUsers);
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 
