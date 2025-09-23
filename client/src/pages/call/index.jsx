@@ -56,11 +56,6 @@ function Call() {
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
         console.log('Local video added');
-
-        socket.emit("join", { 
-          room_id,
-          user_id,
-        });
       } catch (err) {
         console.error("Failed to get local stream", err);
       }
@@ -113,6 +108,12 @@ function Call() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
+
+  useEffect(() => {
+    if (local_stream) {
+      socket.emit("join", { room_id, user_id });
+    }
+  }, [local_stream, room_id, user_id]);
 
   useEffect(() => {
     const attemptReconnect = async (peerId) => {
@@ -303,13 +304,12 @@ function Call() {
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
       users
-      .filter(item => item[1] !== socket.id)
-      .forEach(item => {
-        const peerId = item[1];
-        if (!pc.current[peerId]) {
-          startConnection(peerId);
-        }
-      });
+        .filter(([id, sid]) => sid !== socket.id)
+        .forEach(([id, sid]) => {
+          if (!pc.current[sid]) {
+            startConnection(sid);
+          }
+        });
     }
     
     socket.on("offer", handleOffer);
