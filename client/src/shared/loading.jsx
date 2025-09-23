@@ -13,6 +13,9 @@ function LoaderFull() {
       >
         <Image
           src={Cat}
+          style={{
+            width: 30,
+          }}
         />
       </div>
     </div>
