@@ -236,7 +236,7 @@ function Call({
         users
         .filter(item => item[1] !== socket.id)
         .forEach(item => startConnection(item[1]));
-      }, 3000);
+      }, 500);
     }
     
     socket.on("offer", handleOffer);
