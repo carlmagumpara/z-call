@@ -281,7 +281,7 @@ function Call() {
 
   return (
     <Container>
-      <div className="vh-100 w-100 d-flex justify-content-center align-items-center">
+      <div className="vh-100 w-100 d-flex justify-content-center align-items-center gap-3">
         <video
           id="local"
           autoPlay
