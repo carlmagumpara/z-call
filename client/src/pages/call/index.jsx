@@ -44,6 +44,7 @@ function Call() {
   const pendingCandidates = useRef({});
   const reconnectAttempts = useRef({});
   const [local_stream, setLocalStream] = useState(null);
+  const [remoteStreams, setRemoteStreams] = useState({});
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
@@ -162,6 +163,11 @@ function Call() {
         const remoteStream = event.streams[0];
         pc.current[peerId].remoteStream = remoteStream;
 
+        setRemoteStreams(prevState => ({
+          ...prevState,
+          [peerId]: remoteStream
+        }));
+
         // const videoEl = document.getElementById(`remote-${peerId}`);
         // if (videoEl) {
         //   videoEl.srcObject = remoteStream
@@ -226,6 +232,11 @@ function Call() {
           console.log('new track added: ', from);
           const remoteStream = event.streams[0];
           pc.current[from].remoteStream = remoteStream;
+
+          setRemoteStreams(prevState => ({
+            ...prevState,
+            [from]: remoteStream
+          }));
           // const videoEl = document.getElementById(`remote-${from}`);
           // if (videoEl) {
           //   videoEl.srcObject = remoteStream;
@@ -343,7 +354,21 @@ function Call() {
         muted
         style={{ width: 300, height: 200, backgroundColor: '#000000' }}
       />
-      {users
+      {Object.entries(remoteStreams).map(([peerId, stream]) => (
+        <video
+          key={peerId}
+          autoPlay
+          playsInline
+          ref={el => {
+            if (el) el.srcObject = stream;
+          }}
+          style={{ width: 300, height: 200, backgroundColor: "#000" }}
+        />
+      ))}
+
+
+
+{/*      {users
       .filter(([id, sid]) => sid !== socket.id)
       .map(([id, sid]) => (
         <video
@@ -357,7 +382,7 @@ function Call() {
           playsInline 
           style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
         />
-      ))}
+      ))}*/}
     </Container>
   );
 }
