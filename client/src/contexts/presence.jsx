@@ -53,9 +53,9 @@ function PresenceProvider({ children }) {
     };
   }, [user_id]);
 
-  if(!user_id || !isConnected) {
-    return <Loading />;
-  }
+  // if(!user_id || !isConnected) {
+  //   return <Loading />;
+  // }
 
   return (
     <PresenceContext.Provider

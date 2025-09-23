@@ -259,10 +259,95 @@ function Call({
     });
   }, [users]);
 
+  const remotes = users
+    .filter(item => item[1] !== socket.id)
+    .map(item => ({
+      id: `remote-${item[1]}`,
+      autoPlay: true,
+      playsInline: true,
+    }))
+
+  const videos = [
+    {
+      id: 'local',
+      autoPlay: true,
+      playsInline: true,
+      muted: true,
+    },
+    ...remotes
+  ];
+
+  console.log('videos', videos);
+
+  const tileSize = (idx) => {
+    if (videos.length === 0) return "0%";
+    if (videos.length === 1) return "50%";
+    if (videos.length === 2) return "49%";
+    if (videos.length === 3) return idx === 2 ? "98%" : "49%";
+    if (videos.length === 4) return "49%";
+    if (videos.length === 5) return idx < 2 ? "48%" : "32%";
+    return "32%";
+  };
+
+  const tileHeight = () => {
+    if (videos.length === 1) {
+      return "50vh"
+    };
+    if (videos.length <= 6) {
+      return "50vh"
+    };
+    return "calc(100vh / 3)";
+  };
+
+  const tileWrapperStyle = (idx) => ({
+    flex: `0 0 ${tileSize(idx)}`,
+    maxWidth: tileSize(idx),
+    minWidth: 120,
+    display: "flex",
+    alignItems: "stretch",
+    justifyContent: "center",
+    height: tileHeight(),
+    backgroundColor: '#000000'
+  });
+
+  // return (
+  //   <>
+  //     <div 
+  //       className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100"
+  //     >
+  //       {[...Array(videos).keys()].map(i => (
+  //         <div
+  //           style={tileWrapperStyle(i)}
+  //           className="d-flex justify-content-center align-items-center"
+  //         >
+  //           {i + 1}
+  //         </div>
+  //       ))}
+  //     </div>
+  //   </>
+  // );
+
+
   return (
     <Container>
-      <div className="vh-100 w-100 d-flex justify-content-center align-items-center gap-3">
-        <video
+      <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100">
+        {videos.map((item, index) => (
+          <div
+            style={tileWrapperStyle(index)}
+            className="d-flex justify-content-center align-items-center"
+          >
+            <video
+              {...item}
+              style={{
+                width: '100%',
+                height: '100%',
+              }}
+              className="object-fit-contain"
+            />
+          </div>
+        ))}
+
+{/*        <video
           id="local"
           autoPlay
           playsInline
@@ -279,7 +364,7 @@ function Call({
             playsInline 
             style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
           />
-        ))}
+        ))}*/}
       </div>
     </Container>
   );

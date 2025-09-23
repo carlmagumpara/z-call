@@ -54,9 +54,9 @@ function Room() {
     };
   }, [room_id, user_id]);
 
-  if(!users.length) {
-    return <Loading />;
-  }
+  // if(!users.length) {
+  //   return <Loading />;
+  // }
 
   return (
     <Call
