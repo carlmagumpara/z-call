@@ -42,7 +42,6 @@ function Call() {
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const [local_stream, setLocalStream] = useState(null);
-  const [remoteStreams, setRemoteStreams] = useState({});
 
   useEffect(() => {
     let localStream;
@@ -70,12 +69,16 @@ function Call() {
   useEffect(() => {
     const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
       console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`);
-
       const conn = pc.current[peerId];
-      if (!conn) return;
+      const state = conn?.connectionState;
+
+      if (!conn || ["closed", "disconnected", "failed"].includes(state)) {
+        return rebuildPeerConnection(peerId);
+      }
 
       if (retries <= 0) {
-        return console.log("Failed to reconnect", peerId);
+        console.log("Failed to reconnect", peerId);
+        return rebuildPeerConnection(peerId);
       }
 
       try {
@@ -89,10 +92,6 @@ function Call() {
       }
 
       setTimeout(() => {
-        const state = pc.current[peerId]?.connectionState;
-        if (!pc.current[peerId] || ["closed", "disconnected", "failed"].includes(state)) {
-          rebuildPeerConnection(peerId);
-        }
         attemptReconnect(peerId, retries - 1, delay);
       }, delay);
     };
@@ -117,11 +116,6 @@ function Call() {
         if (videoEl) {
           videoEl.srcObject = remoteStream
         };
-
-        setRemoteStreams(prevState => ({
-          ...prevState,
-          [peerId]: remoteStream
-        }));
       };
 
       newPc.onicecandidate = (e) => {
@@ -185,11 +179,6 @@ function Call() {
           if (videoEl) {
             videoEl.srcObject = remoteStream;
           }
-
-          setRemoteStreams(prevState => ({
-            ...prevState,
-            [from]: remoteStream
-          }));
         };
 
         conn.onicecandidate = (e) => {
@@ -303,20 +292,7 @@ function Call() {
           muted
           style={{ width: 300, height: 200, backgroundColor: '#000000' }}
         />
-        {Object.entries(remoteStreams).map(([peerId, stream]) => (
-          <video
-            key={peerId}
-            autoPlay
-            playsInline
-            ref={el => {
-              console.log(el, peerId, stream);
-              if (el) el.srcObject = stream;
-            }}
-            style={{ width: 300, height: 200, backgroundColor: "#000" }}
-          />
-        ))}
-
-{/*        {users
+        {users
         .filter(item => item[1] !== socket.id)
         .map(item => (
           <video
@@ -326,7 +302,7 @@ function Call() {
             playsInline 
             style={{ width: 300, height: 200, backgroundColor: '#000000' }} 
           />
-        ))}*/}
+        ))}
       </div>
     </Container>
   );
