@@ -72,6 +72,13 @@ function Call() {
   }, []);
 
   useEffect(() => {
+    Object.entries(remoteStreams).forEach(([peerId, stream]) => {
+      const videoEl = document.getElementById(`remote-${peerId}`);
+      if (videoEl) videoEl.srcObject = stream;
+    });
+  }, [remoteStreams]);
+
+  useEffect(() => {
     const handleJoinRoom = data => {
       console.log('handleJoinRoom', data);
       setUsers(prevState => ([
@@ -122,13 +129,6 @@ function Call() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [users]);
-
-  useEffect(() => {
-    Object.entries(remoteStreams).forEach(([peerId, stream]) => {
-      const videoEl = document.getElementById(`remote-${peerId}`);
-      if (videoEl) videoEl.srcObject = stream;
-    });
-  }, [remoteStreams]);
 
   useEffect(() => {
     if (local_stream) {
@@ -331,13 +331,15 @@ function Call() {
     console.log('localStream', local_stream);
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
-      users
-        .filter(([id, sid]) => sid !== socket.id)
-        .forEach(([id, sid]) => {
-          if (!pc.current[sid]) {
-            startConnection(sid);
-          }
-        });
+      setTimeout(() => {
+        users
+          .filter(([id, sid]) => sid !== socket.id)
+          .forEach(([id, sid]) => {
+            if (!pc.current[sid]) {
+              startConnection(sid);
+            }
+          });
+        }, 1000);
     }
     
     socket.on("offer", handleOffer);
@@ -353,24 +355,26 @@ function Call() {
 
   return (
     <Container>
-      <video
-        id="local"
-        autoPlay
-        playsInline
-        muted
-        style={{ width: 300, height: 200, backgroundColor: '#000000' }}
-      />
-      {users
-        .filter(([id, sid]) => sid !== socket.id)
-        .map(([id, sid]) => (
-          <video
-            key={sid}
-            id={`remote-${sid}`}
-            autoPlay
-            playsInline
-            style={{ width: 300, height: 200, backgroundColor: "#000" }}
-          />
-        ))}   
+      <div className="vh-100 w-100 d-flex justify-content-center align-items-center">
+        <video
+          id="local"
+          autoPlay
+          playsInline
+          muted
+          style={{ width: 300, height: 200, backgroundColor: '#000000' }}
+        />
+        {users
+          .filter(([id, sid]) => sid !== socket.id)
+          .map(([id, sid]) => (
+            <video
+              key={sid}
+              id={`remote-${sid}`}
+              autoPlay
+              playsInline
+              style={{ width: 300, height: 200, backgroundColor: "#000" }}
+            />
+          ))}
+      </div>
 {/*      {Object.entries(remoteStreams).map(([peerId, stream]) => (
         <video
           key={peerId}
