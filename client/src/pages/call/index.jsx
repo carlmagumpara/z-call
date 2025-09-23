@@ -124,6 +124,13 @@ function Call() {
   }, [users]);
 
   useEffect(() => {
+    Object.entries(remoteStreams).forEach(([peerId, stream]) => {
+      const videoEl = document.getElementById(`remote-${peerId}`);
+      if (videoEl) videoEl.srcObject = stream;
+    });
+  }, [remoteStreams]);
+
+  useEffect(() => {
     if (local_stream) {
       socket.emit("join", { room_id, user_id });
     }
@@ -353,7 +360,18 @@ function Call() {
         muted
         style={{ width: 300, height: 200, backgroundColor: '#000000' }}
       />
-      {Object.entries(remoteStreams).map(([peerId, stream]) => (
+      {users
+        .filter(([id, sid]) => sid !== socket.id)
+        .map(([id, sid]) => (
+          <video
+            key={sid}
+            id={`remote-${sid}`}
+            autoPlay
+            playsInline
+            style={{ width: 300, height: 200, backgroundColor: "#000" }}
+          />
+        ))}   
+{/*      {Object.entries(remoteStreams).map(([peerId, stream]) => (
         <video
           key={peerId}
           autoPlay
@@ -364,7 +382,7 @@ function Call() {
           }}
           style={{ width: 300, height: 200, backgroundColor: "#000" }}
         />
-      ))}
+      ))}*/}
     </Container>
   );
 }
