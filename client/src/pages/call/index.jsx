@@ -204,6 +204,7 @@ function Call() {
     };
 
     const handleAnswer = async ({ from, sdp }) => {
+      console.log('handleAnswer', from);
       const conn = pc.current[from];
       if (conn) {
         try {
@@ -231,6 +232,7 @@ function Call() {
     };
 
     const handleIceCandidate = async ({ from, candidate }) => {
+      console.log('handleIceCandidate', from);
       const conn = pc.current[from];
       if (!conn) {
         console.warn("Peer connection not found for ICE candidate from:", from);
