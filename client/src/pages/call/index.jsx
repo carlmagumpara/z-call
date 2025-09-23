@@ -68,41 +68,31 @@ function Call() {
 
   useEffect(() => {
     const attemptReconnect = async (peerId, retries = 3, delay = 1000) => {
-      console.log('attemptReconnect', peerId);
-      
-      // const conn = pc.current[peerId];
-      // if (!conn) return;
+      console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`);
 
-      // reconnectAttempts.current[peerId] = (reconnectAttempts.current[peerId] || 0) + 1;
-
-      // if (reconnectAttempts.current[peerId] > 3) {
-      //   console.warn("Too many reconnect attempts for", peerId, "— rebuilding...");
-      //   return rebuildPeerConnection(peerId);
-      // }
-
-      // try {
-      //   const offer = await conn.createOffer({ iceRestart: true });
-      //   await conn.setLocalDescription(offer);
-      //   socket.emit("offer", { to: peerId, sdp: offer });
-      //   console.log("ICE restart triggered for", peerId);
-      // } catch (err) {
-      //   console.error("ICE restart failed, rebuilding connection", err);
-      //   rebuildPeerConnection(peerId);
-      // }
+      const conn = pc.current[peerId];
+      if (!conn) return;
 
       if (retries <= 0) {
         return console.log("Failed to reconnect", peerId);
-      };
+      }
+
+      try {
+        const offer = await conn.createOffer({ iceRestart: true });
+        await conn.setLocalDescription(offer);
+        socket.emit("offer", { to: peerId, sdp: offer });
+        console.log("ICE restart triggered for", peerId);
+      } catch (err) {
+        console.error("ICE restart failed, rebuilding connection", err);
+        rebuildPeerConnection(peerId);
+      }
 
       setTimeout(() => {
-        if (!pc.current[peerId] || pc.current[peerId].connectionState === "closed") {
+        const state = pc.current[peerId]?.connectionState;
+        if (!pc.current[peerId] || ["closed", "disconnected", "failed"].includes(state)) {
           rebuildPeerConnection(peerId);
         }
-        attemptReconnect(
-          peerId, 
-          retries - 1, 
-          delay
-        );
+        attemptReconnect(peerId, retries - 1, delay);
       }, delay);
     };
 
