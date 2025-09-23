@@ -68,7 +68,7 @@ function Call() {
     //   }
     // };
 
-    socket.emit("join-room", { 
+    socket.emit("join", { 
       room_id,
       user_id,
     });
@@ -87,21 +87,21 @@ function Call() {
     };
 
     const handleBeforeUnload = (event) => {
-      socket.emit("leave-room", { 
+      socket.emit("leave", { 
         room_id,
         user_id,
       });
     };
 
-    socket.on("join-room", handleJoinRoom);
-    socket.on("left-room", handleLeftRoom);
-    socket.on("room-users", handleRoomUsers);
+    socket.on("joining", handleJoinRoom);
+    socket.on("leaving", handleLeftRoom);
+    socket.on("here", handleRoomUsers);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      socket.off("offer", handleJoinRoom);
-      socket.off("answer", handleLeftRoom);
-      socket.off("ice-candidate", handleRoomUsers);
+      socket.off("joining", handleJoinRoom);
+      socket.off("leaving", handleLeftRoom);
+      socket.off("here", handleRoomUsers);
       window.removeEventListener('beforeunload', handleBeforeUnload)
     };
   }, []);

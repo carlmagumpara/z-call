@@ -44,10 +44,10 @@ io.on('connection', (socket) => {
   });
 
   // room
-  socket.on("join-room", async ({ room_id, user_id }) => {
+  socket.on("join", async ({ room_id, user_id }) => {
     console.log(`${user_id} join room: ${room_id}`);
     socket.join(room_id);
-    socket.to(room_id).emit("join-room", {
+    socket.to(room_id).emit("joining", {
       user_id,
       socket_id: socket.id
     });
@@ -63,13 +63,13 @@ io.on('connection', (socket) => {
       }
     }
 
-    io.to(room_id).emit("room-users", users);
+    socket.emit("here", users);
   });
 
-  socket.on("left-room", ({ room_id, user_id }) => {
+  socket.on("leave", ({ room_id, user_id }) => {
     console.log(`${user_id} left room: ${room_id}`);
     socket.leave(room_id);
-    socket.to(room_id).emit("left-room", { user_id });
+    socket.to(room_id).emit("leaving", { user_id });
   });
 
   socket.on("offer", (data) => {
