@@ -81,6 +81,13 @@ function Call() {
 
     const handleLeftRoom = data => {
       console.log('handleLeftRoom', data);
+      const user = users.find(item => item[0] === data.user_id);
+
+      if(user && pc.current[user[1]]) {
+        pc.current[user[1]].close();
+        delete pc.current[user[1]];
+      }
+      
       setUsers(prevState => prevState.filter(item => item[0] !== data.user_id));
     };
 
@@ -107,7 +114,7 @@ function Call() {
       socket.off("here", handleRoomUsers);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, []);
+  }, [users]);
 
   useEffect(() => {
     if (local_stream) {
