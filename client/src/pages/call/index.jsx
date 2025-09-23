@@ -98,7 +98,7 @@ function Call() {
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      local_stream.getTracks().forEach(track => {
+      local_stream?.getTracks().forEach(track => {
         newPc.addTrack(track, local_stream);
       });
 
@@ -163,7 +163,10 @@ function Call() {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-        local_stream.getTracks().forEach(track => conn.addTrack(track, local_stream));
+
+        local_stream?.getTracks().forEach(track => {
+          conn.addTrack(track, local_stream);
+        });
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
