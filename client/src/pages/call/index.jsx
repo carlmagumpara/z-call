@@ -83,16 +83,26 @@ function Call() {
 
     const handleRoomUsers = data => {
       console.log('handleRoomUsers', data);
+      setUsers(data);
+    };
+
+    const handleBeforeUnload = (event) => {
+      socket.emit("leave-room", { 
+        room_id,
+        user_id,
+      });
     };
 
     socket.on("join-room", handleJoinRoom);
     socket.on("left-room", handleLeftRoom);
     socket.on("room-users", handleRoomUsers);
-    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       socket.off("offer", handleJoinRoom);
       socket.off("answer", handleLeftRoom);
       socket.off("ice-candidate", handleRoomUsers);
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     };
   }, []);
 

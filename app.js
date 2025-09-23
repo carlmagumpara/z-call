@@ -47,7 +47,7 @@ io.on('connection', (socket) => {
   socket.on("join-room", async ({ room_id, user_id }) => {
     console.log(`${user_id} join room: ${room_id}`);
     socket.join(room_id);
-    socket.to(room_id).emit("joined", {
+    socket.to(room_id).emit("join-room", {
       user_id,
       socket_id: socket.id
     });
