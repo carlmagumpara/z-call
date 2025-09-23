@@ -13,13 +13,14 @@ function Room() {
   const { room_id } = useParams();
   const { user_id, username, setUserName } = usePresence();
   const [users, setUsers] = useState([]);
-  const [joined, setJoined] = useState(true);
+  const [joined, setJoined] = useState(false);
   const [settings, setSettings] = useState({
-    initialVideo: true,
+    initialVideo: false,
     initialAudio: false,
   });
 
   useEffect(() => {
+    
     const handleJoined = () => {
       console.log('handleUserJoin');
       setJoined(true);
