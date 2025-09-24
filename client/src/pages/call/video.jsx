@@ -2,6 +2,8 @@ import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash } 
 
 function Video({ index, item, count }) {
 
+  console.log(item);
+
   const tileSize = (idx) => {
     if (count === 0) return "0%";
     if (count === 1) return "50%";
@@ -49,7 +51,9 @@ function Video({ index, item, count }) {
           <div
             className="w-100 h-100 text-center position-absolute d-flex justify-content-center align-items-center"
           >
-            <h1 className="text-white mb-0">{item.user?.username}</h1>
+            <h3 className="text-white mb-0">
+              {item.myself ? 'You' : item.user?.username}
+            </h3>
           </div>
         ) : null}
         <video
@@ -68,7 +72,7 @@ function Video({ index, item, count }) {
             height: 30,
           }}
        >
-          {item.media?.video ? <p className="text-white mb-0">{item.user?.username}</p> : <div />}
+          {item.media?.video ? <p className="text-white mb-0">{item.myself ? 'You' : item.user?.username}</p> : <div />}
           <p className="text-white mb-0 d-flex justify-content-center align-items-center gap-3">
             {item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />} 
             {item.media?.video ? <FaVideo /> : <FaVideoSlash />}

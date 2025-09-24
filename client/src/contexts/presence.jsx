@@ -35,7 +35,8 @@ function PresenceProvider({ children }) {
     const onConnect = () => {
       console.log('onConnect');
       socket.emit("user_online", {
-        user_id
+        user_id,
+        username
       });
       setIsConnected(true);
     };

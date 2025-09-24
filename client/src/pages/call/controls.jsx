@@ -1,32 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Button } from 'react-bootstrap';
 import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaEllipsisV } from 'react-icons/fa';
-import { socket } from '@/shared/socket';
-import { usePresence } from '@/contexts/presence';
 
-function Controls({ localStream, roomId }) {
-  const { user_id, username } = usePresence();
-  const [audio, setAudio] = useState([]);
-  const [video, setVideo] = useState([]);
-
-  const getStreamTrackStatus = () => {
-    if (!localStream) return;
-
-    const audioTracks = localStream.getAudioTracks();
-    const videoTracks = localStream.getVideoTracks();
-
-    const summarize = (track) => ({
-      id: track.id,
-      kind: track.kind,
-      enabled: track.enabled,
-      muted: track.muted ?? false,
-      readyState: track.readyState,
-      label: track.label,
-    });
-
-    setAudio(audioTracks.map(summarize));
-    setVideo(videoTracks.map(summarize));
-  }
+function Controls({ 
+  localAudio, 
+  localVideo, 
+  localStream, 
+  getStreamTrackStatus 
+}) {
 
   const setTrackEnabled = (type, enabled) => {
     const tracks = type === "audio" 
@@ -36,21 +16,6 @@ function Controls({ localStream, roomId }) {
     tracks.forEach(track => track.enabled = enabled);
     getStreamTrackStatus();
   };
-
-  useEffect(() => {
-    getStreamTrackStatus();
-  }, []);
-
-  useEffect(() => {
-    socket.emit("media-status", { 
-      room_id: roomId,
-      user_id,
-      data: {
-        video: video?.[0]?.enabled || false,
-        audio: audio?.[0]?.enabled || false,
-      }
-    });
-  }, [audio, video]);
 
   return (
     <div
@@ -63,14 +28,14 @@ function Controls({ localStream, roomId }) {
         className="d-flex justify-content-center align-items-center gap-3 p-5 video-controls"
       >
         <Button
-          onClick={() => setTrackEnabled("audio", !audio[0]?.enabled)}
+          onClick={() => setTrackEnabled("audio", !localAudio[0]?.enabled)}
         >
-          {audio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
+          {localAudio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
         </Button>
         <Button
-          onClick={() => setTrackEnabled("video", !video[0]?.enabled)}
+          onClick={() => setTrackEnabled("video", !localVideo[0]?.enabled)}
         >
-          {video[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
+          {localVideo[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
         </Button>
         <Button
           variant="danger"

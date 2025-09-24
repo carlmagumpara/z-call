@@ -23,7 +23,7 @@ const io = new Server(server, {
   cors: corsConfig
 });
 
-let onlineUsers = new Map();
+let online_users = new Map();
 
 app.use(cors(corsConfig));
 app.use(express.json());
@@ -35,24 +35,26 @@ app.get(/(.*)/, (req, res, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log("User connected:", socket.id);
+  // console.log("User connected:", socket.id);
 
   // global presence
   socket.on("user_online", async ({ user_id, username }) => {
-    onlineUsers.set(user_id, { 
+    online_users.set(user_id, {
+      user_id,
       socket_id: socket.id, 
       username: username 
     });
-    console.log(`${user_id} is online`);
-    io.emit("update_users", Array.from(onlineUsers.entries()));
+    console.log(`${username} is online`);
+    io.emit("update_users", Array.from(online_users.values()));
   });
 
   // room presence
   socket.on("join", async ({ room_id, user_id, username }) => {
-    console.log(`${user_id} join room: ${room_id}`);
+    console.log(`${username} join room: ${room_id}`);
     socket.join(room_id);
     socket.to(room_id).emit("joining", {
       user_id,
+      username,
       socket_id: socket.id
     });
     socket.data.username = username;
@@ -62,13 +64,12 @@ io.on('connection', (socket) => {
     const users = [];
 
     if (clients) {
-      for (const clientId of clients) {
-        const clientSocket = io.sockets.sockets.get(clientId);
-        users.push([
-          clientSocket.data.user_id, 
-          clientId, 
-          clientSocket.data.username
-        ]);
+      for (const socket_id of clients) {
+        const client_socket = io.sockets.sockets.get(socket_id);
+        users.push({
+          socket_id: socket_id,
+          ...client_socket.data
+        });
       }
     }
 
@@ -76,19 +77,21 @@ io.on('connection', (socket) => {
     socket.emit("joined");
   });
 
-  socket.on("leave", ({ room_id, user_id }) => {
-    console.log(`${user_id} left room: ${room_id}`);
+  socket.on("leave", ({ room_id, user_id, username }) => {
+    console.log(`${username} left room: ${room_id}`);
     socket.leave(room_id);
-    socket.to(room_id).emit("leaving", { user_id });
+    socket.to(room_id).emit("leaving", { 
+      user_id,
+      username,
+      socket_id: socket.id
+    });
   });
 
   // conference
-  socket.on("media-status", ({ room_id, user_id, data }) => {
-    // socket.to(room_id).emit("media-status", { user_id, data });
+  socket.on("media-status", ({ room_id, user_id, username, data }) => {
     io.to(room_id).emit("media-status", {
-      socket_id: socket.id,
-      user_id, 
-      data 
+      user_id,
+      data,
     });
   });
 
@@ -115,21 +118,21 @@ io.on('connection', (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log('a user disconnect');
+    let user_id = null;
+    let username = null;
 
-    let userId = null;
-
-    for (let [uid, info] of onlineUsers.entries()) {
-      if (info.socketId === socket.id) {
-        userId = uid;
-        onlineUsers.delete(uid);
+    for (let [uid, info] of online_users.entries()) {
+      if (info.socket_id === socket.id) {
+        user_id = uid;
+        username = info.username;
+        online_users.delete(uid);
         break;
       }
     }
 
-    if (userId) {
-      console.log(`${userId} went offline`);
-      io.emit("update_users", Array.from(onlineUsers.entries()));
+    if (user_id) {
+      console.log(`${username} went offline`);
+      io.emit("update_users", Array.from(online_users.values()));
     }
   });
 });

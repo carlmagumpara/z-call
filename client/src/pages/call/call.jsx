@@ -1,3 +1,4 @@
+import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
 import { Container } from 'react-bootstrap';
@@ -8,16 +9,38 @@ import Video from './video';
 import Controls from './controls';
 
 function Call({ 
-  users = [], 
+  users = [],
+  mediaStatus = {},
   initialVideo = true, 
-  initialAudio = true 
+  initialAudio = true
 }) {
   const { room_id } = useParams();
+  const socket_id = socket.id;
   const { user_id, username } = usePresence();
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const [local_stream, setLocalStream] = useState(null);
-  const [mediaStatus, setMediaStatus] = useState({});
+  const [local_audio, setLocalAudio] = useState([]);
+  const [local_video, setLocalVideo] = useState([]);
+
+  const getStreamTrackStatus = () => {
+    if (!local_stream) return;
+
+    const audioTracks = local_stream.getAudioTracks();
+    const videoTracks = local_stream.getVideoTracks();
+
+    const summarize = (track) => ({
+      id: track.id,
+      kind: track.kind,
+      enabled: track.enabled,
+      muted: track.muted ?? false,
+      readyState: track.readyState,
+      label: track.label,
+    });
+
+    setLocalAudio(audioTracks.map(summarize));
+    setLocalVideo(videoTracks.map(summarize));
+  };
 
   useEffect(() => {
     let localStream;
@@ -29,6 +52,15 @@ function Call({
         });
         localStream.getVideoTracks().forEach(track => track.enabled = initialVideo);
         localStream.getAudioTracks().forEach(track => track.enabled = initialAudio);
+        // socket.emit("media-status", { 
+        //   user_id,
+        //   username,
+        //   room_id,
+        //   data: {
+        //     video: initialVideo,
+        //     audio: initialAudio,
+        //   }
+        // });
         setLocalStream(localStream);
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
@@ -242,25 +274,42 @@ function Call({
       console.log('Users to connect', users);
       setTimeout(() => {
         users
-        .filter(item => item[1] !== socket.id)
-        .forEach(item => startConnection(item[1]));
+        .filter(item => item.user_id !== user_id)
+        .forEach(item => startConnection(item.socket_id));
       }, 3000);
     }
+
+    getStreamTrackStatus();
     
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
 
     return () => {
+      Object.values(pc.current).forEach(conn => conn.close());
+      pc.current = {};
       socket.off("offer", handleOffer);
       socket.off("answer", handleAnswer);
       socket.off("ice-candidate", handleIceCandidate);
     };
-  }, [users, local_stream]);
+  }, [user_id, users, local_stream]);
+
+  useEffect(() => {
+    console.log('Send media status...');
+    socket.emit("media-status", { 
+      user_id,
+      username,
+      room_id,
+      data: {
+        video: local_video?.[0]?.enabled || false,
+        audio: local_audio?.[0]?.enabled || false,
+      }
+    });
+  }, [local_audio, local_video, users]);
 
   useEffect(() => {
     Object.keys(pc.current || {}).forEach(sid => {
-      const user = users.find(item => item[1] === sid);
+      const user = users.find(item => item.socket_id === sid);
       if (!user) {
         pc.current[sid].close();
         delete pc.current[sid];
@@ -273,37 +322,16 @@ function Call({
     });
   }, [users]);
 
-  useEffect(() => {
-    const handleMediaStatus = data => {
-      setMediaStatus(prevState => ({
-        ...prevState,
-        [data.socket_id]: data.data
-      }));
-    };
-
-    socket.on("media-status", handleMediaStatus);
-
-    return () => {
-      socket.off("media-status", handleMediaStatus);
-    };
-  }, []);
-
   const remotes = users
-    .filter(item => item[1] !== socket.id)
-    .map(item => ({
-      id: `remote-${item[1]}`,
-      autoPlay: true,
-      playsInline: true,
-      user: {
-        user_id: item[0],
-        socket_id: item[1],
-        username: item[2],
-      },
-      media: mediaStatus[item[1]] ? mediaStatus[item[1]] : {
-        audio: false,
-        video: false,
-      }
-    }))
+  .filter(item => item.user_id !== user_id)
+  .map(item => ({
+    id: `remote-${item.socket_id}`,
+    autoPlay: true,
+    playsInline: true,
+    user: item,
+    myself: false,
+    media: mediaStatus[item.user_id] || { audio: false, video: false },
+  }));
 
   const videos = [
     {
@@ -311,15 +339,8 @@ function Call({
       autoPlay: true,
       playsInline: true,
       muted: true,
-      user: {
-        user_id,
-        socket_id: socket.id,
-        username,
-      },
-      media: mediaStatus[socket.id] ? mediaStatus[socket.id] : {
-        audio: false,
-        video: false,
-      }
+      myself: true,
+      media: mediaStatus[user_id] || { audio: false, video: false },
     },
     ...remotes
   ];
@@ -338,8 +359,10 @@ function Call({
       </div>
       {local_stream ? (
         <Controls
-          roomId={room_id}
+          localAudio={local_audio}
+          localVideo={local_video}
           localStream={local_stream}
+          getStreamTrackStatus={getStreamTrackStatus}
         />
       ) : null}
     </>

@@ -14,6 +14,7 @@ function Room() {
   const { user_id, username, setUserName } = usePresence();
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
+  const [media_status, setMediaStatus] = useState({});
   const [settings, setSettings] = useState({
     initialVideo: false,
     initialAudio: false,
@@ -27,21 +28,28 @@ function Room() {
     };
 
     const handleJoinRoom = data => {
-      console.log('handleJoinRoom', data);
+      console.log('handleJoinRoom', );
       setUsers(prevState => ([
         ...prevState,
-        [data.user_id, data.socket_id, username]
-      ]))
+        data,
+      ]));
     };
 
     const handleLeftRoom = data => {
       console.log('handleLeftRoom', data);
-      setUsers(prevState => prevState.filter(item => item[0] !== data.user_id));
+      setUsers(prevState => prevState.filter(item => item.user_id !== data.user_id));
     };
 
     const handleRoomUsers = data => {
       console.log('handleRoomUsers', data);
       setUsers(data);
+    };
+
+    const handleMediaStatus = ({ user_id, data }) => {
+      setMediaStatus(prevState => ({
+        ...prevState,
+        [user_id]: data
+      }));
     };
 
     const handleBeforeUnload = (event) => {
@@ -56,6 +64,7 @@ function Room() {
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
     socket.on("joined", handleJoined);
+    socket.on("media-status", handleMediaStatus);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
@@ -63,6 +72,7 @@ function Room() {
       socket.off("leaving", handleLeftRoom);
       socket.off("here", handleRoomUsers);
       socket.off("joined", handleJoined);
+      socket.off("media-status", handleMediaStatus);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [room_id, user_id, username]);
@@ -174,6 +184,7 @@ function Room() {
     <Call
       {...settings}
       users={users}
+      mediaStatus={media_status}
     />
   )
 }
