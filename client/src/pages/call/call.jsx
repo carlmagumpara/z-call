@@ -326,7 +326,7 @@ function Call({
 
   return (
     <>
-      <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100 gap-3">
+      <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100">
         {videos.map((item, index) => (
           <Video 
             key={index}
