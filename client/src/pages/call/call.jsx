@@ -52,15 +52,6 @@ function Call({
         });
         localStream.getVideoTracks().forEach(track => track.enabled = initialVideo);
         localStream.getAudioTracks().forEach(track => track.enabled = initialAudio);
-        // socket.emit("media-status", { 
-        //   user_id,
-        //   username,
-        //   room_id,
-        //   data: {
-        //     video: initialVideo,
-        //     audio: initialAudio,
-        //   }
-        // });
         setLocalStream(localStream);
         const videoEl = document.getElementById("local");
         if (videoEl) videoEl.srcObject = localStream;
@@ -337,8 +328,8 @@ function Call({
       id: `remote-${item.socket_id}`,
       autoPlay: true,
       playsInline: true,
-      user: item,
       myself: false,
+      user: item,
       media: mediaStatus[item.user_id] || { audio: false, video: false },
     })))
   ];
@@ -346,7 +337,7 @@ function Call({
   return (
     <div className="d-flex flex-column w-100 vh-100">
       <div className="flex-grow-1 w-100 overflow-auto">
-        <div class="video-masonry">
+        <div className="video-masonry">
           {videos.map((item, index) => (
             <Video 
               key={index}

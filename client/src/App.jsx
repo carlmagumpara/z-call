@@ -10,8 +10,8 @@ function App() {
     <Routes>        
       <Route element={<Wrapper />}>
         <Route path="/" element={<Landing />} />
-        <Route path="/r/:room_id" element={<Call />} />
       </Route>
+      <Route path="/r/:room_id" element={<Call />} />
     </Routes>
   )
 }

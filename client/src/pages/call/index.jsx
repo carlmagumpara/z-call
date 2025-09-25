@@ -52,7 +52,7 @@ function Room() {
       }));
     };
 
-    const handleBeforeUnload = (event) => {
+    const handleBeforeUnload = () => {
       socket.emit("leave", { 
         room_id,
         user_id,
@@ -73,6 +73,7 @@ function Room() {
       socket.off("here", handleRoomUsers);
       socket.off("joined", handleJoined);
       socket.off("media-status", handleMediaStatus);
+      handleBeforeUnload();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [room_id, user_id, username]);

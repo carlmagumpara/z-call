@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router';
 import { Button } from 'react-bootstrap';
 import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaEllipsisV } from 'react-icons/fa';
 
@@ -7,6 +8,7 @@ function Controls({
   localStream, 
   getStreamTrackStatus 
 }) {
+  const navigate = useNavigate();
 
   const setTrackEnabled = (type, enabled) => {
     const tracks = type === "audio" 
@@ -40,7 +42,7 @@ function Controls({
           </Button>
           <Button
             variant="danger"
-            onClick={() => {}}
+            onClick={() => navigate('/')}
           >
             <FaPhoneSlash />
           </Button>

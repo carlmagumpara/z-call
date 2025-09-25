@@ -1,6 +1,9 @@
 import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash } from 'react-icons/fa';
+import { usePresence } from '@/contexts/presence';
 
 function Video({ index, item, count }) {
+  const { username } = usePresence();
+
   return (
     <div
       className="peer-tile"
@@ -9,10 +12,10 @@ function Video({ index, item, count }) {
         {...item}
         className="peer-video"
       />
-      <div className="peer-name">
-        <p>{item.myself ? 'You' : item.user?.username}</p>
-        <p>{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
-        <p>{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
+      <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
+        <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
+        <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
+        <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
       </div>
     </div>
   )
