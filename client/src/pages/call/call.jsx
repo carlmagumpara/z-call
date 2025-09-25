@@ -322,17 +322,6 @@ function Call({
     });
   }, [users]);
 
-  const remotes = users
-  .filter(item => item.user_id !== user_id)
-  .map(item => ({
-    id: `remote-${item.socket_id}`,
-    autoPlay: true,
-    playsInline: true,
-    user: item,
-    myself: false,
-    media: mediaStatus[item.user_id] || { audio: false, video: false },
-  }));
-
   const videos = [
     {
       id: 'local',
@@ -342,20 +331,31 @@ function Call({
       myself: true,
       media: mediaStatus[user_id] || { audio: false, video: false },
     },
-    ...remotes
+    ...(users
+    .filter(item => item.user_id !== user_id)
+    .map(item => ({
+      id: `remote-${item.socket_id}`,
+      autoPlay: true,
+      playsInline: true,
+      user: item,
+      myself: false,
+      media: mediaStatus[item.user_id] || { audio: false, video: false },
+    })))
   ];
 
   return (
-    <>
-      <div className="d-flex flex-wrap justify-content-center align-items-center vh-100 w-100">
-        {videos.map((item, index) => (
-          <Video 
-            key={index}
-            index={index}
-            item={item}
-            count={videos.length}
-          />
-        ))}
+    <div className="d-flex flex-column w-100 vh-100">
+      <div className="flex-grow-1 w-100 overflow-auto">
+        <div class="video-masonry">
+          {videos.map((item, index) => (
+            <Video 
+              key={index}
+              index={index}
+              item={item}
+              count={videos.length}
+            />
+          ))}
+        </div>
       </div>
       {local_stream ? (
         <Controls
@@ -365,7 +365,7 @@ function Call({
           getStreamTrackStatus={getStreamTrackStatus}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 

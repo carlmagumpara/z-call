@@ -18,37 +18,39 @@ function Controls({
   };
 
   return (
-    <div
-      className="position-absolute d-flex justify-content-center align-items-center w-100"
-      style={{
-        bottom: 0
-      }}
-    >
+    <div className="flex-shrink-1">
       <div
-        className="d-flex justify-content-center align-items-center gap-3 p-5 video-controls"
+        className="d-flex justify-content-center align-items-center w-100"
+        style={{
+          bottom: 0
+        }}
       >
-        <Button
-          onClick={() => setTrackEnabled("audio", !localAudio[0]?.enabled)}
+        <div
+          className="d-flex justify-content-center align-items-center gap-3 p-3 video-controls"
         >
-          {localAudio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
-        </Button>
-        <Button
-          onClick={() => setTrackEnabled("video", !localVideo[0]?.enabled)}
-        >
-          {localVideo[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
-        </Button>
-        <Button
-          variant="danger"
-          onClick={() => {}}
-        >
-          <FaPhoneSlash />
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {}}
-        >
-          <FaEllipsisV />
-        </Button>
+          <Button
+            onClick={() => setTrackEnabled("audio", !localAudio[0]?.enabled)}
+          >
+            {localAudio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
+          </Button>
+          <Button
+            onClick={() => setTrackEnabled("video", !localVideo[0]?.enabled)}
+          >
+            {localVideo[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {}}
+          >
+            <FaPhoneSlash />
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {}}
+          >
+            <FaEllipsisV />
+          </Button>
+        </div>
       </div>
     </div>
   );
