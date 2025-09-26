@@ -1,19 +1,26 @@
 import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router';
-import { Container } from 'react-bootstrap';
+import { useNavigate, useParams } from 'react-router';
+import { Container, Button } from 'react-bootstrap';
+import { 
+  FaVideo, 
+  FaVideoSlash, 
+  FaMicrophone, 
+  FaMicrophoneSlash, 
+  FaPhoneSlash, 
+  FaShareSquare, 
+  FaEllipsisV 
+} from 'react-icons/fa';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 import { iceConfig } from './config';
-import Video from './video';
-import Controls from './controls';
 
 function Call({ 
   users = [],
-  mediaStatus = {},
   initialVideo = true, 
   initialAudio = true
 }) {
+  const navigate = useNavigate();
   const { room_id } = useParams();
   const socket_id = socket.id;
   const { user_id, username } = usePresence();
@@ -22,6 +29,8 @@ function Call({
   const [local_stream, setLocalStream] = useState(null);
   const [local_audio, setLocalAudio] = useState([]);
   const [local_video, setLocalVideo] = useState([]);
+  const [media_status, setMediaStatus] = useState({});
+  const [screen_sharing, setScreenSharing] = useState(false);
 
   const getStreamTrackStatus = () => {
     if (!local_stream) return;
@@ -40,6 +49,60 @@ function Call({
 
     setLocalAudio(audioTracks.map(summarize));
     setLocalVideo(videoTracks.map(summarize));
+  };
+
+  const setTrackEnabled = (type, enabled) => {
+    const tracks = type === "audio" 
+      ? local_stream.getAudioTracks() 
+      : local_stream.getVideoTracks();
+
+    tracks.forEach(track => track.enabled = enabled);
+    getStreamTrackStatus();
+  };
+
+  const setUpScreenShare = async () => {
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+        video: true,
+        audio: true,
+      });
+      const screenTrack = screenStream.getVideoTracks()[0];
+
+      screenTrack.onended = async () => {        
+        console.log("Screen sharing has ended");
+
+        const localStream = await navigator.mediaDevices.getUserMedia({ 
+          video: true,
+          audio: true,
+        });
+        const localTrack = localStream.getVideoTracks()[0];
+
+        local_stream.removeTrack(local_stream.getVideoTracks()[0]);
+        local_stream.addTrack(localTrack);
+
+        setScreenSharing(false);
+        Object.keys(pc.current || {}).forEach(sid => {
+          const sender = pc.current[sid].getSenders().find(s => s.track.kind === "video");
+          if (sender) {
+            sender.replaceTrack(localTrack);
+          }
+        });
+      };
+
+      local_stream.removeTrack(local_stream.getVideoTracks()[0]);
+      local_stream.addTrack(screenTrack);
+      setScreenSharing(true);
+
+      Object.keys(pc.current || {}).forEach(sid => {
+        const sender = pc.current[sid].getSenders().find(s => s.track.kind === "video");
+        if (sender) {
+          sender.replaceTrack(screenTrack);
+        }
+      });
+      console.log('Local video added');
+    } catch (err) {
+      console.error("Failed to get local stream", err);
+    }
   };
 
   useEffect(() => {
@@ -271,10 +334,18 @@ function Call({
     }
 
     getStreamTrackStatus();
+
+    const handleMediaStatus = ({ user_id, data }) => {
+      setMediaStatus(prevState => ({
+        ...prevState,
+        [user_id]: data
+      }));
+    };
     
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
+    socket.on("media-status", handleMediaStatus);
 
     return () => {
       Object.values(pc.current).forEach(conn => conn.close());
@@ -282,6 +353,7 @@ function Call({
       socket.off("offer", handleOffer);
       socket.off("answer", handleAnswer);
       socket.off("ice-candidate", handleIceCandidate);
+      socket.off("media-status", handleMediaStatus);
     };
   }, [user_id, users, local_stream]);
 
@@ -292,11 +364,12 @@ function Call({
       username,
       room_id,
       data: {
+        screen_sharing,
         video: local_video?.[0]?.enabled || false,
         audio: local_audio?.[0]?.enabled || false,
       }
     });
-  }, [local_audio, local_video, users]);
+  }, [local_audio, local_video, users, screen_sharing]);
 
   useEffect(() => {
     Object.keys(pc.current || {}).forEach(sid => {
@@ -304,11 +377,6 @@ function Call({
       if (!user) {
         pc.current[sid].close();
         delete pc.current[sid];
-      } else {
-        const videoEl = document.getElementById(`remote-${sid}`);
-        if (videoEl) {
-          videoEl.srcObject = pc.current[sid].remoteStream;
-        }
       }
     });
   }, [users]);
@@ -320,7 +388,7 @@ function Call({
       playsInline: true,
       muted: true,
       myself: true,
-      media: mediaStatus[user_id] || { audio: false, video: false },
+      media: media_status[user_id] || { audio: false, video: false },
     },
     ...(users
     .filter(item => item.user_id !== user_id)
@@ -330,7 +398,7 @@ function Call({
       playsInline: true,
       myself: false,
       user: item,
-      media: mediaStatus[item.user_id] || { audio: false, video: false },
+      media: media_status[item.user_id] || { audio: false, video: false },
     })))
   ];
 
@@ -339,23 +407,66 @@ function Call({
       <div className="flex-grow-1 w-100 overflow-auto">
         <div className="video-masonry">
           {videos.map((item, index) => (
-            <Video 
+            <div
               key={index}
-              index={index}
-              item={item}
-              count={videos.length}
-            />
+              className="peer-tile"
+            >
+              <video
+                {...item}
+                className="peer-video"
+              />
+              <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
+                <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
+                <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
+                <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
+              </div>
+            </div>
           ))}
         </div>
       </div>
-      {local_stream ? (
-        <Controls
-          localAudio={local_audio}
-          localVideo={local_video}
-          localStream={local_stream}
-          getStreamTrackStatus={getStreamTrackStatus}
-        />
-      ) : null}
+      <div className="flex-shrink-1">
+        <div
+          className="d-flex justify-content-center align-items-center w-100"
+          style={{
+            bottom: 0
+          }}
+        >
+          <div
+            className="d-flex justify-content-center align-items-center gap-3 p-3 video-controls"
+          >
+            <Button
+              variant="secondary"
+              onClick={() => setTrackEnabled("audio", !local_audio[0]?.enabled)}
+            >
+              {local_audio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => setTrackEnabled("video", !local_video[0]?.enabled)}
+            >
+              {local_video[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
+            </Button>
+            <Button
+              variant={screen_sharing ? 'primary' : 'secondary'}
+              onClick={setUpScreenShare}
+            >
+              <FaShareSquare />
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {}}
+            >
+              <FaEllipsisV />
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => navigate('/')}
+            >
+              <FaPhoneSlash />
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -14,11 +14,8 @@ function Room() {
   const { user_id, username, setUserName } = usePresence();
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
-  const [media_status, setMediaStatus] = useState({});
-  const [settings, setSettings] = useState({
-    initialVideo: false,
-    initialAudio: false,
-  });
+  const [video, setVideo] = useState(false);
+  const [audio, setAudio] = useState(false);
 
   useEffect(() => {
     
@@ -45,13 +42,6 @@ function Room() {
       setUsers(data);
     };
 
-    const handleMediaStatus = ({ user_id, data }) => {
-      setMediaStatus(prevState => ({
-        ...prevState,
-        [user_id]: data
-      }));
-    };
-
     const handleBeforeUnload = () => {
       socket.emit("leave", { 
         room_id,
@@ -64,7 +54,6 @@ function Room() {
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
     socket.on("joined", handleJoined);
-    socket.on("media-status", handleMediaStatus);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
@@ -72,19 +61,16 @@ function Room() {
       socket.off("leaving", handleLeftRoom);
       socket.off("here", handleRoomUsers);
       socket.off("joined", handleJoined);
-      socket.off("media-status", handleMediaStatus);
       handleBeforeUnload();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [room_id, user_id, username]);
 
   const onSubmit = async (values, { setSubmitting, setErrors }) => {
-    setSettings({
-      initialVideo: values.video,
-      initialAudio: values.audio,
-    });
-    localStorage.setItem("username", values.username);
+    setVideo(values.video);
+    setAudio(values.audio);
     setUserName(values.username);
+    localStorage.setItem("username", values.username);
     socket.emit("join", { 
       room_id, 
       user_id,
@@ -179,9 +165,9 @@ function Room() {
         <>
           {!users.length ? <Loading /> : (
             <Call
-              {...settings}
+              initialVideo={video}
+              initialAudio={audio}
               users={users}
-              mediaStatus={media_status}
             />
           )}
         </>
