@@ -1,13 +1,20 @@
 import './video.scss';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import { Container, Row, Col, Form, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Image } from 'react-bootstrap';
+import { 
+  FaVideo, 
+  FaVideoSlash, 
+  FaMicrophone, 
+  FaMicrophoneSlash,
+} from 'react-icons/fa';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 import Loading from '@/shared/loading';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import Call from './call';
+import Logo from '@/assets/logo.png'
 
 function Room() {
   const { room_id } = useParams();
@@ -79,7 +86,7 @@ function Room() {
   };
 
   return (
-    <div className="call-container">
+    <div className="video-call-container">
       {!joined ? (
         <Container>
           <Formik
@@ -114,6 +121,18 @@ function Room() {
                     className="vh-100 d-flex justify-content-center align-items-center"
                   >
                     <div className="w-100">
+                      <div
+                        className="d-flex justify-content-center align-items-center mb-5"
+                      >
+                        <Image 
+                          className="" 
+                          src={Logo}
+                          alt="logo"
+                          style={{
+                            width: 150
+                          }}
+                        />
+                      </div>
                       <Form.Group className="mb-3">
                         <Form.Label>Username</Form.Label>
                         <Form.Control 
@@ -126,32 +145,31 @@ function Room() {
                         />
                         {errors.username && touched.username && <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>}
                       </Form.Group>
-                      <Form.Group className="mb-3">
-                        <Form.Check
-                          type="switch"
-                          label="Enable Video"
-                          checked={values.video}
-                          onChange={() => setFieldValue('video', !values.video)}
-                        />
-                      </Form.Group>
-                      <Form.Group className="mb-3">
-                        <Form.Check
-                          type="switch"
-                          label="Enable Audio"
-                          checked={values.audio}
-                          onChange={() => setFieldValue('audio', !values.audio)}
-                        />
-                      </Form.Group>
                       <div
-                        className="d-flex justify-content-end align-items-center"
+                        className="d-flex justify-content-between align-items-center"
                       >
+                        <div
+                          className="d-flex justify-content-start align-items-center gap-3 video-controls"
+                        >
+                          <Button
+                            variant="secondary"
+                            onClick={() => setFieldValue('audio', !values.audio)}
+                          >
+                            {values.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => setFieldValue('video', !values.video)}
+                          >
+                            {values.video ? <FaVideo /> : <FaVideoSlash />}
+                          </Button>
+                        </div>
                         <Button 
-                          disabled={isSubmitting}
                           type="submit"
                           variant="danger"
-                          className="w-100"
+                          disabled={isSubmitting}
                         >
-                          {isSubmitting ? 'Please wait...' : 'Join Room'}
+                          {isSubmitting ? 'Please wait...' : 'Join Call'}
                         </Button>
                       </div>
                     </div>

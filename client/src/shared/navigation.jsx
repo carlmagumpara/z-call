@@ -20,12 +20,12 @@ function Navigation() {
         <Navbar.Brand 
           as={Link} 
           to={`/`} 
-          className="cursor-pointer d-flex justify-content-center align-items-center gap-2"
+          className="cursor-pointer d-flex justify-content-center align-items-center gap-2 text-white"
         >
           <Image 
             className="" 
             src={Logo}
-            alt="lexmeet"
+            alt="logo"
             style={{
               width: 40
             }}
@@ -43,7 +43,7 @@ function Navigation() {
                     size={30}
                     variant="beam"
                   />
-                  <span className="ms-2">{username}</span>
+                  <span className="ms-2 text-white">{username}</span>
                 </>
               }
               align="end"

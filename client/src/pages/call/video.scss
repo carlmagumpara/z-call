@@ -1,24 +1,24 @@
-.call-container {
+.video-call-container {
   margin: 0;
   background: #111827;
   color: white;
   font-family: sans-serif;
 
   .video-masonry {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
     padding: 12px;
-    column-count: 1;
-    column-gap: 12px;
     width: 100%;
   }
 
+  .video-masonry:has(.peer-tile:only-child) {
+    grid-template-columns: minmax(300px, 600px);
+    justify-content: center;
+  }
+
   .peer-tile {
-    display: inline-block;
-    width: 100%;
-    height: 33.3333333333vh;
-    margin-bottom: 12px;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    -moz-column-break-inside: avoid;
+    height: 100%;
     background: #1f2937;
     border-radius: 12px;
     overflow: hidden;
@@ -28,7 +28,7 @@
 
   .peer-video {
     width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
     object-fit: cover;
   }
@@ -58,7 +58,6 @@
 
   .active {
     outline: 3px solid #10b981;
-    /*transform: scale(1.02);*/
     z-index: 2;
   }
 
