@@ -1,135 +1,50 @@
 import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Container, Button, ButtonGroup } from 'react-bootstrap';
-import { 
-  FaVideo, 
-  FaVideoSlash, 
-  FaMicrophone, 
-  FaMicrophoneSlash, 
-  FaPhoneSlash, 
-  FaShareSquare, 
-  FaEllipsisV 
-} from 'react-icons/fa';
-import { PiVideoConference } from 'react-icons/pi';
+// import { 
+//   FaVideo, 
+//   FaVideoSlash, 
+//   FaMicrophone, 
+//   FaMicrophoneSlash, 
+//   FaPhoneSlash, 
+//   FaShareSquare, 
+//   FaEllipsisV 
+// } from 'react-icons/fa';
+// import { PiVideoConference } from 'react-icons/pi';
 import { socket } from '@/shared/socket';
-import { usePresence } from '@/contexts/presence';
 import { iceConfig } from './config';
-
 import Video from './components/video';
+import VideoControls from './components/video-controls';
+import { useRoom } from './room-context';
+import { useVideoCall } from './video-call-context';
 
-function Call({ 
-  users = [],
-  initialVideo = true, 
-  initialAudio = true
-}) {
+function Call() {
   const navigate = useNavigate();
-  const { room_id } = useParams();
   const socket_id = socket.id;
+  const { roomId, users } = useRoom();
+  const {
+    local_stream,
+    video_enabled, 
+    audio_enabled,
+    screen_stream,
+    screen_sharing,
+    layout,
+    setupLocalStream,
+    setupScreenShare,
+    setTrackEnabled,
+    setLayout
+  } = useVideoCall();
   const pc = useRef({});
   const pendingCandidates = useRef({});
-  const [local_stream, setLocalStream] = useState(null);
-  const [local_audio, setLocalAudio] = useState([]);
-  const [local_video, setLocalVideo] = useState([]);
   const [media_status, setMediaStatus] = useState({});
-  const [screen_sharing, setScreenSharing] = useState(false);
-  const [layout, setLayout] = useState('single-grid');
   const [selected, setSelected] = useState(null);
 
-  const getStreamTrackStatus = () => {
-    if (!local_stream) return;
-
-    const audioTracks = local_stream.getAudioTracks();
-    const videoTracks = local_stream.getVideoTracks();
-
-    setLocalAudio(audioTracks);
-    setLocalVideo(videoTracks);
-  };
-
-  const setTrackEnabled = (type, enabled) => {
-    const tracks = type === "audio" 
-      ? local_stream.getAudioTracks() 
-      : local_stream.getVideoTracks();
-
-    tracks.forEach(track => track.enabled = enabled);
-    getStreamTrackStatus();
-  };
-
-  const setUpScreenShare = async () => {
-    try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-        video: true,
-        audio: true,
-      });
-      const screenTrack = screenStream.getVideoTracks()[0];
-
-      screenTrack.onended = async () => {        
-        console.log("Screen sharing has ended");
-        const localStream = await navigator.mediaDevices.getUserMedia({ 
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30, max: 60 }
-          },
-          audio: true,
-        });
-        const localTrack = localStream.getVideoTracks()[0];
-
-        local_stream.removeTrack(local_stream.getVideoTracks()[0]);
-        local_stream.addTrack(localTrack);
-
-        setScreenSharing(false);
-        Object.keys(pc.current || {}).forEach(sid => {
-          const sender = pc.current[sid].getSenders().find(s => s.track.kind === "video");
-          if (sender) {
-            sender.replaceTrack(localTrack);
-          }
-        });
-      };
-
-      local_stream.removeTrack(local_stream.getVideoTracks()[0]);
-      local_stream.addTrack(screenTrack);
-      setScreenSharing(true);
-
-      Object.keys(pc.current || {}).forEach(sid => {
-        const sender = pc.current[sid].getSenders().find(s => s.track.kind === "video");
-        if (sender) {
-          sender.replaceTrack(screenTrack);
-        }
-      });
-      console.log('Local video added');
-    } catch (err) {
-      console.error("Failed to get local stream", err);
-    }
-  };
-
   useEffect(() => {
-    let localStream;
-    const setUpLocalStream = async () => {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
-          audio: true,
-        });
-        localStream.getVideoTracks().forEach(track => track.enabled = initialVideo);
-        localStream.getAudioTracks().forEach(track => track.enabled = initialAudio);
-        setLocalStream(localStream);
-        const localVideoEl = document.getElementById("local");
-        if (localVideoEl) localVideoEl.srcObject = localStream;
-        console.log('Local video added');
-      } catch (err) {
-        console.error("Failed to get local stream", err);
-      }
-    };
+    setupLocalStream();
+  }, []);
 
-    setUpLocalStream();
-    
-    return () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [initialVideo, initialAudio]);
+  const addTrack = (peer, track, stream) => peer.addTrack(track, stream);
 
   useEffect(() => {
     const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
@@ -167,9 +82,7 @@ function Call({
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
 
-      local_stream?.getTracks().forEach(track => {
-        newPc.addTrack(track, local_stream);
-      });
+      local_stream?.getTracks().forEach(track => addTrack(newPc, track, local_stream));
 
       newPc.ontrack = (event) => {
         console.log('new track added: ', peerId);
@@ -231,9 +144,7 @@ function Call({
       if (!pc.current[from]) {
         pc.current[from] = conn;
 
-        local_stream?.getTracks().forEach(track => {
-          conn.addTrack(track, local_stream);
-        });
+        local_stream?.getTracks().forEach(track => addTrack(conn, track, local_stream));
 
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
@@ -322,6 +233,14 @@ function Call({
       }
     };
 
+    const handleMediaStatus = ({ socket_id, data }) => {
+      console.log('handleMediaStatus', data);
+      setMediaStatus(prevState => ({
+        ...prevState,
+        [socket_id]: data
+      }));
+    };
+
     if (local_stream && users.length > 1) {
       console.log('Users to connect', users);
       setTimeout(() => {
@@ -331,16 +250,6 @@ function Call({
       }, 3000);
     }
 
-    getStreamTrackStatus();
-
-    const handleMediaStatus = ({ socket_id, data }) => {
-      console.log('handleMediaStatus', data);
-      setMediaStatus(prevState => ({
-        ...prevState,
-        [socket_id]: data
-      }));
-    };
-    
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
@@ -357,26 +266,48 @@ function Call({
   }, [users, local_stream]);
 
   useEffect(() => {
-    console.log('Send media status...');
-    socket.emit("media-status", {
-      room_id,
-      data: {
-        screen_sharing,
-        video: local_video?.[0]?.enabled || false,
-        audio: local_audio?.[0]?.enabled || false,
-      }
-    });
-  }, [local_audio, local_video, users, screen_sharing]);
-
-  useEffect(() => {
     Object.keys(pc.current || {}).forEach(sid => {
       const user = users.find(item => item.socket_id === sid);
       if (!user) {
+        console.log('Peer removed: ', sid);
         pc.current[sid].close();
         delete pc.current[sid];
       }
     });
-  }, [users, layout]);
+  }, [users]);
+
+  useEffect(() => {
+    console.log('Send media status...');
+    socket.emit("media-status", {
+      room_id: roomId,
+      data: {
+        screen_sharing,
+        video: video_enabled || false,
+        audio: audio_enabled || false,
+      }
+    });
+  }, [video_enabled, audio_enabled, screen_sharing]);
+
+  useEffect(() => {
+    local_stream?.getVideoTracks().forEach(track => track.enabled = video_enabled);
+    local_stream?.getAudioTracks().forEach(track => track.enabled = audio_enabled);
+
+    Object.keys(pc.current || {}).forEach(sid => {
+      const sender = pc.current[sid]
+        .getSenders()
+        .find(s => s.track && s.track.kind === 'video');
+
+      if (sender) {
+        const newTrack = screen_sharing
+          ? screen_stream?.getVideoTracks()[0]
+          : local_stream?.getVideoTracks()[0];
+
+        if (newTrack) {
+          sender.replaceTrack(newTrack);
+        }
+      }
+    });
+  }, [screen_sharing, local_stream, screen_stream, video_enabled, audio_enabled]);
 
   useEffect(() => {
     const localVideoEl = document.getElementById("local");
@@ -476,47 +407,7 @@ function Call({
             bottom: 0
           }}
         >
-          <ButtonGroup
-            size="lg"
-            className=""
-          >
-            <Button
-              variant={local_audio[0]?.enabled ? 'primary' : 'secondary'}
-              onClick={() => setTrackEnabled("audio", !local_audio[0]?.enabled)}
-            >
-              {local_audio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
-            </Button>
-            <Button
-              variant={local_video[0]?.enabled ? 'primary' : 'secondary'}
-              onClick={() => setTrackEnabled("video", !local_video[0]?.enabled)}
-            >
-              {local_video[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
-            </Button>
-            <Button
-              variant={screen_sharing ? 'primary' : 'secondary'}
-              onClick={setUpScreenShare}
-            >
-              <FaShareSquare />
-            </Button>
-            <Button
-              variant={layout === 'single-grid' ? 'primary' : 'secondary'}
-              onClick={() => setLayout(prevState => prevState === 'grid' ? 'single-grid' : 'grid')}
-            >
-              <PiVideoConference />
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {}}
-            >
-              <FaEllipsisV />
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => navigate('/')}
-            >
-              <FaPhoneSlash />
-            </Button>
-          </ButtonGroup>
+          <VideoControls />
         </div>
       </div>
     </div>

@@ -5,25 +5,27 @@ import { Container, Row, Col, Form, Button, ButtonGroup, Image } from 'react-boo
 import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from 'react-icons/fa';
 import Logo from '@/assets/logo.png'
 
-function Settings() {
+import { useRoom } from '../room-context';
+import { useVideoCall } from '../video-call-context';
+
+function VideoSettings({ user }) {
+  const { joinRoom } = useRoom();
+  const { setVideoEnabled, setAudioEnabled } = useVideoCall();
 
   const onSubmit = async (values, { setSubmitting, setErrors }) => {
-    // setVideo(values.video);
-    // setAudio(values.audio);
-    // setUserName(values.username);
-    // localStorage.setItem("username", values.username);
-    // socket.emit("join", { 
-    //   room_id, 
-    //   user_id,
-    //   username
-    // });
+    setVideoEnabled(values.video);
+    setAudioEnabled(values.audio);
+    joinRoom(
+      user.user_id,
+      values.username
+    );
   };
 
   return (
     <Container>
       <Formik
         initialValues={{
-          username: '',
+          ...user,
           video: false,
           audio: false,
         }}
@@ -114,3 +116,5 @@ function Settings() {
     </Container>
   )
 }
+
+export default VideoSettings;

@@ -1,24 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { socket } from '@/shared/socket';
+import VideoSettings from './components/video-settings';
 
 const Context = createContext();
 
 export const useRoom = () => useContext(Context);
 
-function RoomProvider({ children, roomId }) {
+function RoomProvider({ children, roomId, user }) {
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
-
-  // const [video, setVideo] = useState(false);
-  // const [audio, setAudio] = useState(false);
-
-  const joinRoom = (userId, userName) => {
-    socket.emit("join", { 
-      room_id: roomId,
-      user_id: userId,
-      username: userName
-    });
-  };
 
   useEffect(() => {
     const handleJoined = () => {
@@ -66,14 +56,27 @@ function RoomProvider({ children, roomId }) {
     };
   }, [roomId]);
 
+  const joinRoom = (userId, userName) => {
+    socket.emit("join", { 
+      room_id: roomId,
+      user_id: userId,
+      username: userName
+    });
+  };
+
   return (
     <Context.Provider
       value={{
         users,
+        roomId,
         joinRoom
       }}
     >
-      {children}
+      {(!joined && !users.length) ? (
+        <VideoSettings 
+          user={user} 
+        />
+      ) : children}
     </Context.Provider>
   )
 }

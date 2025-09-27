@@ -4,6 +4,10 @@ import {
   FaMicrophone, 
   FaMicrophoneSlash,
 } from 'react-icons/fa';
+import { 
+  MdOutlineScreenShare, 
+  MdOutlineStopScreenShare 
+} from 'react-icons/md';
 
 function Video({ myself, user, media, onVideoSelect, ...videoProps }) {
   return (
