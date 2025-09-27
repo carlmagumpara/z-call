@@ -1,7 +1,7 @@
 import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Container, Button } from 'react-bootstrap';
+import { Container, Button, ButtonGroup } from 'react-bootstrap';
 import { 
   FaVideo, 
   FaVideoSlash, 
@@ -11,6 +11,7 @@ import {
   FaShareSquare, 
   FaEllipsisV 
 } from 'react-icons/fa';
+import { PiVideoConference } from 'react-icons/pi';
 import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 import { iceConfig } from './config';
@@ -31,6 +32,8 @@ function Call({
   const [local_video, setLocalVideo] = useState([]);
   const [media_status, setMediaStatus] = useState({});
   const [screen_sharing, setScreenSharing] = useState(false);
+  const [layout, setLayout] = useState('single-grid');
+  const [selected_id, setSelectedId] = useState(null);
 
   const getStreamTrackStatus = () => {
     if (!local_stream) return;
@@ -38,17 +41,8 @@ function Call({
     const audioTracks = local_stream.getAudioTracks();
     const videoTracks = local_stream.getVideoTracks();
 
-    const summarize = (track) => ({
-      id: track.id,
-      kind: track.kind,
-      enabled: track.enabled,
-      muted: track.muted ?? false,
-      readyState: track.readyState,
-      label: track.label,
-    });
-
-    setLocalAudio(audioTracks.map(summarize));
-    setLocalVideo(videoTracks.map(summarize));
+    setLocalAudio(audioTracks);
+    setLocalVideo(videoTracks);
   };
 
   const setTrackEnabled = (type, enabled) => {
@@ -70,9 +64,12 @@ function Call({
 
       screenTrack.onended = async () => {        
         console.log("Screen sharing has ended");
-
         const localStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true,
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30, max: 60 }
+          },
           audio: true,
         });
         const localTrack = localStream.getVideoTracks()[0];
@@ -116,8 +113,8 @@ function Call({
         localStream.getVideoTracks().forEach(track => track.enabled = initialVideo);
         localStream.getAudioTracks().forEach(track => track.enabled = initialAudio);
         setLocalStream(localStream);
-        const videoEl = document.getElementById("local");
-        if (videoEl) videoEl.srcObject = localStream;
+        const localVideoEl = document.getElementById("local");
+        if (localVideoEl) localVideoEl.srcObject = localStream;
         console.log('Local video added');
       } catch (err) {
         console.error("Failed to get local stream", err);
@@ -177,9 +174,9 @@ function Call({
         console.log('new track added: ', peerId);
 
         const remoteStream = event.streams[0];
-        const videoEl = document.getElementById(`remote-${peerId}`);
-        if (videoEl) {
-          videoEl.srcObject = remoteStream
+        const remoteVideoEl = document.getElementById(`remote-${peerId}`);
+        if (remoteVideoEl) {
+          remoteVideoEl.srcObject = remoteStream
         };
         pc.current[peerId].remoteStream = remoteStream;
       };
@@ -240,9 +237,9 @@ function Call({
         conn.ontrack = (event) => {
           console.log('new track added: ', from);
           const remoteStream = event.streams[0];
-          const videoEl = document.getElementById(`remote-${from}`);
-          if (videoEl) {
-            videoEl.srcObject = remoteStream;
+          const remoteVideoEl = document.getElementById(`remote-${from}`);
+          if (remoteVideoEl) {
+            remoteVideoEl.srcObject = remoteStream;
           }
           pc.current[from].remoteStream = remoteStream;
         };
@@ -336,6 +333,7 @@ function Call({
     getStreamTrackStatus();
 
     const handleMediaStatus = ({ user_id, data }) => {
+      console.log('handleMediaStatus', data);
       setMediaStatus(prevState => ({
         ...prevState,
         [user_id]: data
@@ -379,7 +377,33 @@ function Call({
         delete pc.current[sid];
       }
     });
-  }, [users]);
+  }, [users, layout]);
+
+  useEffect(() => {
+    const localVideoEl = document.getElementById("local");
+    const selectedVideoEl = document.getElementById("selected");
+
+    if (localVideoEl) {
+      localVideoEl.srcObject = local_stream;
+    };
+
+    if(layout === 'single-grid') {
+      if (selectedVideoEl) {
+        if(selected_id) {
+          selectedVideoEl.srcObject = pc.current[selected_id].remoteStream;
+        } else {
+          selectedVideoEl.srcObject = local_stream;
+        }
+      }
+    }
+
+    Object.keys(pc.current || {}).forEach(sid => {
+      const videoEl = document.getElementById(`remote-${sid}`);
+      if (videoEl) {
+        videoEl.srcObject = pc.current[sid].remoteStream;
+      };
+    });
+  }, [selected_id, layout, local_stream]);
 
   const videos = [
     {
@@ -404,44 +428,80 @@ function Call({
 
   return (
     <div className="d-flex flex-column w-100 vh-100">
-      <div className="flex-grow-1 w-100 overflow-auto">
-        <div className="video-masonry">
-          {videos.map((item, index) => (
-            <div
-              key={index}
-              className="peer-tile"
-            >
-              <video
-                {...item}
-                className="peer-video"
-              />
-              <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
-                <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
-                <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
-                <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
-              </div>
+      <div className="flex-grow-1 w-100 overflow-auto video-call-container">
+        {layout === 'grid' ? (
+          <div className="video-call-container-grid">
+            <div className="video-masonry">
+              {videos.map((item, index) => (
+                <div
+                  key={index}
+                  className="peer-tile"
+                  onClick={() => setSelectedId(item.myself ? null : item.socket_id)}
+                >
+                  <video
+                    {...item}
+                    className="peer-video"
+                  />
+                  <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
+                    <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
+                    <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
+                    <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="video-call-container-single-grid">
+            <div className="main-video">
+              <video 
+                id="selected"
+                autoPlay={true}
+                playsInline={true}
+                muted={true}
+              ></video>
+            </div>
+            <div className="side-videos">
+              {videos.map((item, index) => (
+                <div
+                  key={index}
+                  className="peer-tile"
+                  onClick={() => setSelectedId(item.myself ? null : item.socket_id)}
+                >
+                  <video
+                    {...item}
+                    className="peer-video"
+                  />
+                  <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
+                    <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
+                    <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
+                    <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-      <div className="flex-shrink-1">
+      <div className="flex-shrink-1 video-call-controls-container">
         <div
-          className="d-flex justify-content-center align-items-center w-100"
+          className="d-flex justify-content-center align-items-center w-100 h-100"
           style={{
             bottom: 0
           }}
         >
-          <div
-            className="d-flex justify-content-center align-items-center gap-3 p-3 video-controls"
+          <ButtonGroup
+            size="lg"
+            className=""
           >
             <Button
-              variant="secondary"
+              variant={local_audio[0]?.enabled ? 'primary' : 'secondary'}
               onClick={() => setTrackEnabled("audio", !local_audio[0]?.enabled)}
             >
               {local_audio[0]?.enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
             </Button>
             <Button
-              variant="secondary"
+              variant={local_video[0]?.enabled ? 'primary' : 'secondary'}
               onClick={() => setTrackEnabled("video", !local_video[0]?.enabled)}
             >
               {local_video[0]?.enabled ? <FaVideo /> : <FaVideoSlash />}
@@ -451,6 +511,12 @@ function Call({
               onClick={setUpScreenShare}
             >
               <FaShareSquare />
+            </Button>
+            <Button
+              variant={layout === 'single-grid' ? 'primary' : 'secondary'}
+              onClick={() => setLayout(prevState => prevState === 'grid' ? 'single-grid' : 'grid')}
+            >
+              <PiVideoConference />
             </Button>
             <Button
               variant="secondary"
@@ -464,7 +530,7 @@ function Call({
             >
               <FaPhoneSlash />
             </Button>
-          </div>
+          </ButtonGroup>
         </div>
       </div>
     </div>
