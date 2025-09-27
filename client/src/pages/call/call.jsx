@@ -16,6 +16,8 @@ import { socket } from '@/shared/socket';
 import { usePresence } from '@/contexts/presence';
 import { iceConfig } from './config';
 
+import Video from './components/video';
+
 function Call({ 
   users = [],
   initialVideo = true, 
@@ -24,7 +26,6 @@ function Call({
   const navigate = useNavigate();
   const { room_id } = useParams();
   const socket_id = socket.id;
-  const { user_id, username } = usePresence();
   const pc = useRef({});
   const pendingCandidates = useRef({});
   const [local_stream, setLocalStream] = useState(null);
@@ -33,7 +34,7 @@ function Call({
   const [media_status, setMediaStatus] = useState({});
   const [screen_sharing, setScreenSharing] = useState(false);
   const [layout, setLayout] = useState('single-grid');
-  const [selected_id, setSelectedId] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   const getStreamTrackStatus = () => {
     if (!local_stream) return;
@@ -325,18 +326,18 @@ function Call({
       console.log('Users to connect', users);
       setTimeout(() => {
         users
-        .filter(item => item.user_id !== user_id)
+        .filter(item => item.socket_id !== socket_id)
         .forEach(item => startConnection(item.socket_id));
       }, 3000);
     }
 
     getStreamTrackStatus();
 
-    const handleMediaStatus = ({ user_id, data }) => {
+    const handleMediaStatus = ({ socket_id, data }) => {
       console.log('handleMediaStatus', data);
       setMediaStatus(prevState => ({
         ...prevState,
-        [user_id]: data
+        [socket_id]: data
       }));
     };
     
@@ -353,13 +354,11 @@ function Call({
       socket.off("ice-candidate", handleIceCandidate);
       socket.off("media-status", handleMediaStatus);
     };
-  }, [user_id, users, local_stream]);
+  }, [users, local_stream]);
 
   useEffect(() => {
     console.log('Send media status...');
-    socket.emit("media-status", { 
-      user_id,
-      username,
+    socket.emit("media-status", {
       room_id,
       data: {
         screen_sharing,
@@ -389,8 +388,8 @@ function Call({
 
     if(layout === 'single-grid') {
       if (selectedVideoEl) {
-        if(selected_id) {
-          selectedVideoEl.srcObject = pc.current[selected_id].remoteStream;
+        if(selected && selected.user?.socket_id !== socket_id) {
+          selectedVideoEl.srcObject = pc.current[selected.user.socket_id].remoteStream;
         } else {
           selectedVideoEl.srcObject = local_stream;
         }
@@ -403,28 +402,47 @@ function Call({
         videoEl.srcObject = pc.current[sid].remoteStream;
       };
     });
-  }, [selected_id, layout, local_stream]);
+  }, [selected, layout, local_stream]);
 
-  const videos = [
-    {
-      id: 'local',
-      autoPlay: true,
-      playsInline: true,
-      muted: true,
-      myself: true,
-      media: media_status[user_id] || { audio: false, video: false },
-    },
-    ...(users
-    .filter(item => item.user_id !== user_id)
-    .map(item => ({
-      id: `remote-${item.socket_id}`,
-      autoPlay: true,
-      playsInline: true,
-      myself: false,
-      user: item,
-      media: media_status[item.user_id] || { audio: false, video: false },
-    })))
-  ];
+  const renderVideos = () => {
+    const defaultMedia = {
+      screen_sharing: false,
+      audio: false, 
+      video: false 
+    };
+
+    const videos = users
+    .map(item => {
+      if(item.socket_id === socket_id) {
+        return {
+          id: 'local',
+          autoPlay: true,
+          playsInline: true,
+          muted: true,
+          myself: true,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        }
+      }
+
+      return {
+        id: `remote-${item.socket_id}`,
+        autoPlay: true,
+        playsInline: true,
+        myself: false,
+        user: item,
+        media: media_status[item.socket_id] || defaultMedia,
+      }
+    });
+
+    return videos.map(item => (
+      <Video
+        {...item}
+        key={item.socket_id}
+        onVideoSelect={() => setSelected(item)}
+      />
+    ));
+  };
 
   return (
     <div className="d-flex flex-column w-100 vh-100">
@@ -432,23 +450,7 @@ function Call({
         {layout === 'grid' ? (
           <div className="video-call-container-grid">
             <div className="video-masonry">
-              {videos.map((item, index) => (
-                <div
-                  key={index}
-                  className="peer-tile"
-                  onClick={() => setSelectedId(item.myself ? null : item.socket_id)}
-                >
-                  <video
-                    {...item}
-                    className="peer-video"
-                  />
-                  <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
-                    <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
-                    <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
-                    <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
-                  </div>
-                </div>
-              ))}
+              {renderVideos()}
             </div>
           </div>
         ) : (
@@ -462,23 +464,7 @@ function Call({
               ></video>
             </div>
             <div className="side-videos">
-              {videos.map((item, index) => (
-                <div
-                  key={index}
-                  className="peer-tile"
-                  onClick={() => setSelectedId(item.myself ? null : item.socket_id)}
-                >
-                  <video
-                    {...item}
-                    className="peer-video"
-                  />
-                  <div className={`peer-name ${item.media?.video ? 'video-on' : 'video-off'}`}>
-                    <p className="left-name">{item.myself ? `${username} (You)` : item.user?.username}</p>
-                    <p className="left-mic">{item.media?.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}</p>
-                    <p className="left-video">{item.media?.video ? <FaVideo /> : <FaVideoSlash />}</p>
-                  </div>
-                </div>
-              ))}
+              {renderVideos()}
             </div>
           </div>
         )}

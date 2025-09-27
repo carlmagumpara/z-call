@@ -9,8 +9,8 @@ function RoomProvider({ children, roomId }) {
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
 
-  const [video, setVideo] = useState(false);
-  const [audio, setAudio] = useState(false);
+  // const [video, setVideo] = useState(false);
+  // const [audio, setAudio] = useState(false);
 
   const joinRoom = (userId, userName) => {
     socket.emit("join", { 
@@ -19,10 +19,6 @@ function RoomProvider({ children, roomId }) {
       username: userName
     });
   };
-
-  useEffect(() => {
-
-  }, [roomId]);
 
   useEffect(() => {
     const handleJoined = () => {
@@ -40,7 +36,7 @@ function RoomProvider({ children, roomId }) {
 
     const handleLeftRoom = data => {
       console.log('handleLeftRoom', data);
-      setUsers(prevState => prevState.filter(item => item.user_id !== data.user_id));
+      setUsers(prevState => prevState.filter(item => item.socket_id !== data.socket_id));
     };
 
     const handleRoomUsers = data => {
@@ -50,9 +46,7 @@ function RoomProvider({ children, roomId }) {
 
     const handleBeforeUnload = () => {
       socket.emit("leave", { 
-        room_id,
-        user_id,
-        username
+        room_id: roomId,
       });
     };
 
@@ -70,7 +64,7 @@ function RoomProvider({ children, roomId }) {
       handleBeforeUnload();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, []);
+  }, [roomId]);
 
   return (
     <Context.Provider

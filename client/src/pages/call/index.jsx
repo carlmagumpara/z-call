@@ -17,6 +17,7 @@ import Call from './call';
 import Logo from '@/assets/logo.png'
 
 import VideoCallProvider from './video-call-context';
+import RoomProvider from './room-context';
 
 function Room() {
   const { room_id } = useParams();
@@ -44,7 +45,7 @@ function Room() {
 
     const handleLeftRoom = data => {
       console.log('handleLeftRoom', data);
-      setUsers(prevState => prevState.filter(item => item.user_id !== data.user_id));
+      setUsers(prevState => prevState.filter(item => item.socket_id !== data.socket_id));
     };
 
     const handleRoomUsers = data => {
@@ -90,112 +91,124 @@ function Room() {
 
   return (
     <VideoCallProvider>
-      <div>
-        {!joined ? (
-          <Container>
-            <Formik
-              initialValues={{
-                username,
-                video: false,
-                audio: false,
-              }}
-              validationSchema={() => Yup.object().shape({
-                username: Yup.string().required('Required'),
-              })}
-              onSubmit={onSubmit}
-            >
-            {({
-              values,
-              errors,
-              touched,
-              handleChange,
-              handleBlur,
-              handleSubmit,
-              isSubmitting,
-              setFieldValue,
-              setValues
-             }) => (
-                <Form 
-                  onSubmit={handleSubmit} 
-                  autoComplete="off"
-                >
-                  <Row>
-                    <Col 
-                      md={{ span: 4, offset: 4 }} 
-                      className="vh-100 d-flex justify-content-center align-items-center"
-                    >
-                      <div className="w-100">
-                        <div
-                          className="d-flex justify-content-center align-items-center mb-5"
-                        >
-                          <Image 
-                            className="" 
-                            src={Logo}
-                            alt="logo"
-                            style={{
-                              width: 150
-                            }}
-                          />
+      <RoomProvider
+        roomId={room_id}
+        user={{
+          user_id, 
+          username,
+        }}
+      >
+        
+
+        <div>
+          {!joined ? (
+            <Container>
+              <Formik
+                initialValues={{
+                  username,
+                  video: false,
+                  audio: false,
+                }}
+                validationSchema={() => Yup.object().shape({
+                  username: Yup.string().required('Required'),
+                })}
+                onSubmit={onSubmit}
+              >
+              {({
+                values,
+                errors,
+                touched,
+                handleChange,
+                handleBlur,
+                handleSubmit,
+                isSubmitting,
+                setFieldValue,
+                setValues
+               }) => (
+                  <Form 
+                    onSubmit={handleSubmit} 
+                    autoComplete="off"
+                  >
+                    <Row>
+                      <Col 
+                        md={{ span: 4, offset: 4 }} 
+                        className="vh-100 d-flex justify-content-center align-items-center"
+                      >
+                        <div className="w-100">
+                          <div
+                            className="d-flex justify-content-center align-items-center mb-5"
+                          >
+                            <Image 
+                              className="" 
+                              src={Logo}
+                              alt="logo"
+                              style={{
+                                width: 150
+                              }}
+                            />
+                          </div>
+                          <Form.Group className="mb-3">
+                            <Form.Label className="text-white">Username</Form.Label>
+                            <Form.Control 
+                              name="username"
+                              placeholder="Username"
+                              value={values.username}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                              className={errors.username && touched.username && 'is-invalid'}
+                            />
+                            {errors.username && touched.username && <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>}
+                          </Form.Group>
+                          <ButtonGroup
+                            size="lg"
+                            className=""
+                          >
+                            <Button
+                              variant="secondary"
+                              onClick={() => setFieldValue('audio', !values.audio)}
+                            >
+                              {values.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              onClick={() => setFieldValue('video', !values.video)}
+                            >
+                              {values.video ? <FaVideo /> : <FaVideoSlash />}
+                            </Button>
+                          </ButtonGroup>
+                          <div
+                            className="d-flex justify-content-end align-items-center"
+                          >
+                            <Button 
+                              type="submit"
+                              variant="danger"
+                              disabled={isSubmitting}
+                            >
+                              {isSubmitting ? 'Please wait...' : 'Join Call'}
+                            </Button>
+                          </div>
                         </div>
-                        <Form.Group className="mb-3">
-                          <Form.Label className="text-white">Username</Form.Label>
-                          <Form.Control 
-                            name="username"
-                            placeholder="Username"
-                            value={values.username}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            className={errors.username && touched.username && 'is-invalid'}
-                          />
-                          {errors.username && touched.username && <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>}
-                        </Form.Group>
-                        <ButtonGroup
-                          size="lg"
-                          className=""
-                        >
-                          <Button
-                            variant="secondary"
-                            onClick={() => setFieldValue('audio', !values.audio)}
-                          >
-                            {values.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            onClick={() => setFieldValue('video', !values.video)}
-                          >
-                            {values.video ? <FaVideo /> : <FaVideoSlash />}
-                          </Button>
-                        </ButtonGroup>
-                        <div
-                          className="d-flex justify-content-end align-items-center"
-                        >
-                          <Button 
-                            type="submit"
-                            variant="danger"
-                            disabled={isSubmitting}
-                          >
-                            {isSubmitting ? 'Please wait...' : 'Join Call'}
-                          </Button>
-                        </div>
-                      </div>
-                    </Col>
-                  </Row>
-                </Form>
+                      </Col>
+                    </Row>
+                  </Form>
+                )}
+              </Formik>
+            </Container>
+          ) : (
+            <>
+              {!users.length ? <Loading /> : (
+                <Call
+                  initialVideo={video}
+                  initialAudio={audio}
+                  users={users}
+                />
               )}
-            </Formik>
-          </Container>
-        ) : (
-          <>
-            {!users.length ? <Loading /> : (
-              <Call
-                initialVideo={video}
-                initialAudio={audio}
-                users={users}
-              />
-            )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+
+
+      </RoomProvider>
     </VideoCallProvider>
   )
 }

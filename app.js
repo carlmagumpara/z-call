@@ -77,20 +77,17 @@ io.on('connection', (socket) => {
     socket.emit("joined");
   });
 
-  socket.on("leave", ({ room_id, user_id, username }) => {
-    console.log(`${username} left room: ${room_id}`);
+  socket.on("leave", ({ room_id }) => {
     socket.leave(room_id);
-    socket.to(room_id).emit("leaving", { 
-      user_id,
-      username,
+    socket.to(room_id).emit("leaving", {
       socket_id: socket.id
     });
   });
 
   // conference
-  socket.on("media-status", ({ room_id, user_id, username, data }) => {
+  socket.on("media-status", ({ room_id, data }) => {
     io.to(room_id).emit("media-status", {
-      user_id,
+      socket_id: socket.id,
       data,
     });
   });
