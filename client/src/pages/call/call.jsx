@@ -24,6 +24,9 @@ function Call() {
   const socket_id = socket.id;
   const { roomId, users } = useRoom();
   const {
+    video_input_device_id,
+    audio_input_device_id,
+    audio_output_device_id,
     local_stream,
     video_enabled, 
     audio_enabled,

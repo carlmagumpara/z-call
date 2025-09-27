@@ -24,6 +24,10 @@ function VideoCallProvider({ children }) {
   const [screen_sharing, setScreenSharing] = useState(false);
   const [layout, setLayout] = useState('single-grid');
 
+  const [video_input_device_id, setVideoInputDeviceId] = useState('');
+  const [audio_input_device_id, setAudioInputDeviceId] = useState('');
+  const [audio_output_device_id, setAudioOutputDeviceId] = useState('');
+
   const getMediaDevices = async (kind) => {
     if(!kind) return [];
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -46,10 +50,12 @@ function VideoCallProvider({ children }) {
 
   const setupLocalStream = async () => {
     try {
-      const local_stream = await navigator.mediaDevices.getUserMedia(defaultMediaConfig);
-      local_stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
-      local_stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
-      setLocalStream(local_stream);
+      const stream = await navigator.mediaDevices.getUserMedia(defaultMediaConfig);
+      stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
+      stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
+      setVideoInputDeviceId(stream.getVideoTracks()[0].getSettings().deviceId);
+      setAudioInputDeviceId(stream.getAudioTracks()[0].getSettings().deviceId);
+      setLocalStream(stream);
     } catch (err) {
       console.error("Failed to get local stream", err);
     }
@@ -100,6 +106,70 @@ function VideoCallProvider({ children }) {
     }
   };
 
+  const switchVideo = async (deviceId) => {
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+          deviceId: { 
+          exact: deviceId 
+        } 
+      },
+      audio: false,
+    });
+
+    const newTrack = newStream.getVideoTracks()[0];
+    // setLocalStream(newStream);
+    
+    // if (pc) {
+    //   const sender = pc.getSenders().find(s => s.track?.kind === "video");
+    //   if (sender) await sender.replaceTrack(newTrack);
+    // }
+
+    // const oldTrack = localStream?.getVideoTracks()[0];
+    // if (oldTrack) {
+    //   oldTrack.stop();
+    //   localStream.removeTrack(oldTrack);
+    // }
+    // localStream.addTrack(newTrack);
+
+    // videoEl.srcObject = localStream;
+  };
+
+  const switchAudioInput = async (deviceId) => {
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: deviceId } },
+      video: false,
+    });
+
+    // const newTrack = newStream.getAudioTracks()[0];
+
+    // if (pc) {
+    //   const sender = pc.getSenders().find(s => s.track?.kind === "audio");
+    //   if (sender) await sender.replaceTrack(newTrack);
+    // }
+
+    // const oldTrack = localStream?.getAudioTracks()[0];
+    // if (oldTrack) {
+    //   oldTrack.stop();
+    //   localStream.removeTrack(oldTrack);
+    // }
+    // localStream.addTrack(newTrack);
+
+    // videoEl.srcObject = localStream;
+  };
+
+  const switchAudioOutput = async (deviceId) => {
+    // if (typeof videoEl.sinkId !== "undefined") {
+    //   try {
+    //     await videoEl.setSinkId(deviceId);
+    //     console.log(`Audio output set to device: ${deviceId}`);
+    //   } catch (err) {
+    //     console.error("Error setting audio output:", err);
+    //   }
+    // } else {
+    //   console.warn("Audio output selection is not supported in this browser.");
+    // }
+  };
+
   useEffect(() => {
     return () => local_stream?.getTracks().forEach(track => track.stop());
   }, []);
@@ -109,11 +179,15 @@ function VideoCallProvider({ children }) {
       const video_inputs = await getMediaDevices('videoinput');
       const audio_inputs = await getMediaDevices('audioinput');
       const audio_outputs = await getMediaDevices('audiooutput');
+      const default_audio_output = audio_outputs.find(d => d.deviceId === "default");
 
       setVideoInputs(video_inputs);
       setAudioInputs(audio_inputs);
       setAudioOutputs(audio_outputs);
+      setAudioOutputDeviceId(default_audio_output.deviceId);
     };
+
+    navigator.mediaDevices.ondevicechange = () => initMediaDevices();
 
     initMediaDevices();
   }, []);
@@ -126,6 +200,9 @@ function VideoCallProvider({ children }) {
         video_inputs,
         audio_inputs,
         audio_outputs,
+        video_input_device_id,
+        audio_input_device_id,
+        audio_output_device_id,
         local_stream,
         screen_stream,
         screen_sharing,
