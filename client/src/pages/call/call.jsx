@@ -37,7 +37,7 @@ function Call() {
     initializeLocalStream();
   }, []);
 
-  const updateRemoteStreams = (peerId, remoteStream) => {
+  const updateRemoteStreams = async (peerId, remoteStream) => {
     const videoTrack = remoteStream.getVideoTracks()[0];
     const audioTrack = remoteStream.getAudioTracks()[0];
     const remoteVideoEl = document.getElementById(`remote-video-${peerId}`);
@@ -47,7 +47,7 @@ function Call() {
     };
     if(remoteAudioEl) {
       remoteAudioEl.srcObject = new MediaStream([audioTrack]);
-    }
+    }    
   };
 
   useEffect(() => {
