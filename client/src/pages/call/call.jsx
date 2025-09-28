@@ -2,16 +2,6 @@ import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Container, Button, ButtonGroup } from 'react-bootstrap';
-// import { 
-//   FaVideo, 
-//   FaVideoSlash, 
-//   FaMicrophone, 
-//   FaMicrophoneSlash, 
-//   FaPhoneSlash, 
-//   FaShareSquare, 
-//   FaEllipsisV 
-// } from 'react-icons/fa';
-// import { PiVideoConference } from 'react-icons/pi';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
 import Video from './components/video';
@@ -24,32 +14,71 @@ function Call() {
   const socket_id = socket.id;
   const { roomId, users } = useRoom();
   const {
+    pc,
+    audio,
     video_input_device_id,
     audio_input_device_id,
     audio_output_device_id,
     local_stream,
     video_enabled, 
     audio_enabled,
-    screen_stream,
     screen_sharing,
     layout,
-    setupLocalStream,
+    initializeLocalStream,
     setupScreenShare,
     setTrackEnabled,
-    setLayout
+    setLayout,
+    media_status, 
+    setMediaStatus
   } = useVideoCall();
-  const pc = useRef({});
   const pendingCandidates = useRef({});
-  const [media_status, setMediaStatus] = useState({});
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    setupLocalStream();
-  }, []);
-
-  const addTrack = (peer, track, stream) => peer.addTrack(track, stream);
+    initializeLocalStream();
+  }, [video_input_device_id, audio_input_device_id]);
 
   useEffect(() => {
+
+    const onTrack = (event, peerId) => {
+      console.log('new track added: ', peerId);
+      const remoteStream = event.streams[0];
+      const remoteVideoEl = document.getElementById(`remote-${peerId}`);
+      if (remoteVideoEl) {
+        remoteVideoEl.srcObject = remoteStream
+      };
+      pc.current[peerId].remoteStream = remoteStream;
+      try {
+        if (!audio.current[peerId]) {
+          const audioEl = new Audio();
+          audioEl.autoplay = true;
+          audioEl.style.display = 'none';
+          audio.current[peerId] = audioEl;
+        }
+        audio.current[peerId].srcObject = remoteStream;
+      } catch (error) {
+        console.log(error)
+      }
+    };
+
+    const onIceCandidate = (event, peerId) => {
+      if (event.candidate) {
+        socket.emit("ice-candidate", { 
+          to: peerId, 
+          candidate: event.candidate 
+        });
+      }
+    };
+
+    const onIceConnectionStateChange = (newPc, peerId) => {
+      console.log("ICE state:", newPc.iceConnectionState);
+      if (newPc.iceConnectionState === "failed" ||
+          newPc.iceConnectionState === "disconnected") {
+        console.warn("Connection failed with", peerId);
+        attemptReconnect(peerId);
+      }
+    };
+
     const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
       console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`);
       const conn = pc.current[peerId];
@@ -81,38 +110,12 @@ function Call() {
       console.log('createPeerConnection', peerId);
 
       if (pc.current[peerId]) return;
-
       const newPc = new RTCPeerConnection(iceConfig);
       pc.current[peerId] = newPc;
-
-      local_stream?.getTracks().forEach(track => addTrack(newPc, track, local_stream));
-
-      newPc.ontrack = (event) => {
-        console.log('new track added: ', peerId);
-
-        const remoteStream = event.streams[0];
-        const remoteVideoEl = document.getElementById(`remote-${peerId}`);
-        if (remoteVideoEl) {
-          remoteVideoEl.srcObject = remoteStream
-        };
-        pc.current[peerId].remoteStream = remoteStream;
-      };
-
-      newPc.onicecandidate = (e) => {
-        if (e.candidate) {
-          socket.emit("ice-candidate", { to: peerId, candidate: e.candidate });
-        }
-      };
-
-      newPc.oniceconnectionstatechange = () => {
-        console.log("ICE state:", newPc.iceConnectionState);
-
-        if (newPc.iceConnectionState === "failed" ||
-            newPc.iceConnectionState === "disconnected") {
-          console.warn("Connection failed with", peerId);
-          attemptReconnect(peerId);
-        }
-      };
+      local_stream?.getTracks().forEach(track => newPc.addTrack(track, local_stream));
+      newPc.ontrack = (event) => onTrack(event, peerId);
+      newPc.onicecandidate = (event) => onIceCandidate(event, peerId);
+      newPc.oniceconnectionstatechange = () => onIceConnectionStateChange(newPc, peerId);
 
       console.log("Created RTCPeerConnection for:", peerId);
     };
@@ -146,24 +149,10 @@ function Call() {
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
       if (!pc.current[from]) {
         pc.current[from] = conn;
-
-        local_stream?.getTracks().forEach(track => addTrack(conn, track, local_stream));
-
-        conn.ontrack = (event) => {
-          console.log('new track added: ', from);
-          const remoteStream = event.streams[0];
-          const remoteVideoEl = document.getElementById(`remote-${from}`);
-          if (remoteVideoEl) {
-            remoteVideoEl.srcObject = remoteStream;
-          }
-          pc.current[from].remoteStream = remoteStream;
-        };
-
-        conn.onicecandidate = (e) => {
-          if (e.candidate) {
-            socket.emit("ice-candidate", { to: from, candidate: e.candidate });
-          }
-        };
+        local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
+        conn.ontrack = (event) => onTrack(event, from);
+        conn.onicecandidate = (event) => onIceCandidate(event, from);
+        conn.oniceconnectionstatechange = () => onIceConnectionStateChange(conn, from);
       }
 
       await conn.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -245,7 +234,6 @@ function Call() {
     };
 
     if (local_stream && users.length > 1) {
-      console.log('Users to connect', users);
       setTimeout(() => {
         users
         .filter(item => item.socket_id !== socket_id)
@@ -292,27 +280,6 @@ function Call() {
   }, [video_enabled, audio_enabled, screen_sharing]);
 
   useEffect(() => {
-    local_stream?.getVideoTracks().forEach(track => track.enabled = video_enabled);
-    local_stream?.getAudioTracks().forEach(track => track.enabled = audio_enabled);
-
-    Object.keys(pc.current || {}).forEach(sid => {
-      const sender = pc.current[sid]
-        .getSenders()
-        .find(s => s.track && s.track.kind === 'video');
-
-      if (sender) {
-        const newTrack = screen_sharing
-          ? screen_stream?.getVideoTracks()[0]
-          : local_stream?.getVideoTracks()[0];
-
-        if (newTrack) {
-          sender.replaceTrack(newTrack);
-        }
-      }
-    });
-  }, [screen_sharing, local_stream, screen_stream, video_enabled, audio_enabled]);
-
-  useEffect(() => {
     const localVideoEl = document.getElementById("local");
     const selectedVideoEl = document.getElementById("selected");
 
@@ -323,7 +290,7 @@ function Call() {
     if(layout === 'single-grid') {
       if (selectedVideoEl) {
         if(selected && selected.user?.socket_id !== socket_id) {
-          selectedVideoEl.srcObject = pc.current[selected.user.socket_id].remoteStream;
+          selectedVideoEl.srcObject = pc.current[selected.user.socket_id]?.remoteStream;
         } else {
           selectedVideoEl.srcObject = local_stream;
         }
@@ -334,9 +301,12 @@ function Call() {
       const videoEl = document.getElementById(`remote-${sid}`);
       if (videoEl) {
         videoEl.srcObject = pc.current[sid].remoteStream;
-      };
+      } else {
+        pc.current[sid].close();
+        delete pc.current[sid];
+      }
     });
-  }, [selected, layout, local_stream]);
+  }, [users, selected, layout, local_stream]);
 
   const renderVideos = () => {
     const defaultMedia = {
@@ -369,11 +339,16 @@ function Call() {
       }
     });
 
+    console.log('videos', videos);
+
     return videos.map(item => (
       <Video
         {...item}
-        key={item.socket_id}
-        onVideoSelect={() => setSelected(item)}
+        key={item.id}
+        onVideoSelect={() => {
+          setLayout('single-grid');
+          setSelected(item);
+        }}
       />
     ));
   };

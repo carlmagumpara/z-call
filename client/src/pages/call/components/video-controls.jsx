@@ -1,21 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, ButtonGroup } from 'react-bootstrap';
-import { 
-  FaVideo, 
-  FaVideoSlash, 
-  FaMicrophone, 
-  FaMicrophoneSlash, 
-  FaPhoneSlash, 
-  FaShareSquare, 
-  FaEllipsisV 
-} from 'react-icons/fa';
-import { 
-  MdOutlineScreenShare, 
-  MdOutlineStopScreenShare 
+import {
+  MdVideocam,
+  MdVideocamOff,
+  MdMic,
+  MdMicOff,
+  MdOutlineCallEnd,
+  MdOutlineScreenShare,
+  MdOutlineStopScreenShare,
+  MdChatBubble,
+  MdMoreVert
 } from 'react-icons/md';
 import { Form, Popconfirm, Modal, Select } from 'antd';
-import { PiVideoConference } from 'react-icons/pi'
+import { PiVideoConference } from 'react-icons/pi';
 import { useVideoCall } from '../video-call-context';
 
 function VideoControls() {
@@ -27,7 +25,10 @@ function VideoControls() {
     video_input_device_id,
     audio_input_device_id,
     audio_output_device_id,
-    video_enabled, 
+    setVideoInputDeviceId,
+    setAudioInputDeviceId,
+    setAudioOutputDeviceId,
+    video_enabled,
     audio_enabled,
     screen_sharing,
     layout,
@@ -35,61 +36,56 @@ function VideoControls() {
     setupScreenShare,
     stopScreenShare,
     setLayout,
-    local_stream,
+    initializeLocalStream,
   } = useVideoCall();
   const [open, setOpen] = useState(false);
 
-  // useEffect(() => {
-  //   if(open) {
-  //     const settingsVideoEl = document.getElementById("settings-video");
-  //     if (settingsVideoEl) {
-  //       settingsVideoEl.srcObject = local_stream;
-  //     };
-  //   }
-  // }, [open, local_stream]);
-
   return (
     <>
-      <ButtonGroup
-        size="lg"
-      >
+      <ButtonGroup size="lg">
         <Button
           variant={audio_enabled ? 'primary' : 'secondary'}
           onClick={() => setTrackEnabled("audio", !audio_enabled)}
         >
-          {audio_enabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
+          {audio_enabled ? <MdMic /> : <MdMicOff />}
         </Button>
         <Button
           variant={video_enabled ? 'primary' : 'secondary'}
           onClick={() => setTrackEnabled("video", !video_enabled)}
         >
-          {video_enabled ? <FaVideo /> : <FaVideoSlash />}
+          {video_enabled ? <MdVideocam /> : <MdVideocamOff />}
         </Button>
         <Popconfirm
           title="Screen Share"
-          description={screen_sharing ? `Are you sure you want to stop sharing your screen?` : `Are you sure you want to share your screen?`}
-          onConfirm={() => screen_sharing ? stopScreenShare() : setupScreenShare()}
+          description={
+            screen_sharing
+              ? `Are you sure you want to stop sharing your screen?`
+              : `Are you sure you want to share your screen?`
+          }
+          onConfirm={() => (screen_sharing ? stopScreenShare() : setupScreenShare())}
           onCancel={() => {}}
           okText="Yes"
           cancelText="No"
         >
-          <Button
-            variant={screen_sharing ? 'primary' : 'secondary'}
-          >
+          <Button variant={screen_sharing ? 'primary' : 'secondary'}>
             {screen_sharing ? <MdOutlineScreenShare /> : <MdOutlineStopScreenShare />}
           </Button>
         </Popconfirm>
+        <Button variant="secondary" onClick={() => {}}>
+          <MdChatBubble />
+        </Button>
         <Button
           variant={layout === 'single-grid' ? 'primary' : 'secondary'}
-          onClick={() => setLayout(prevState => prevState === 'grid' ? 'single-grid' : 'grid')}
+          onClick={() =>
+            setLayout((prevState) =>
+              prevState === 'grid' ? 'single-grid' : 'grid'
+            )
+          }
         >
           <PiVideoConference />
         </Button>
-        <Button
-          variant="secondary"
-          onClick={() => setOpen(true)}
-        >
-          <FaEllipsisV />
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          <MdMoreVert />
         </Button>
         <Popconfirm
           title="Leave Call?"
@@ -99,56 +95,59 @@ function VideoControls() {
           okText="Yes"
           cancelText="No"
         >
-          <Button
-            variant="danger"
-          >
-            <FaPhoneSlash />
+          <Button variant="danger">
+            <MdOutlineCallEnd />
           </Button>
         </Popconfirm>
       </ButtonGroup>
+
       <Modal
         title="Settings"
         closable={{ 'aria-label': 'Custom Close Button' }}
         open={open}
-        onOk={() => {}}
+        okText="Done"
+        onOk={() => setOpen(false)}
         onCancel={() => setOpen(false)}
+        cancelButtonProps={{ style: { display: 'none' } }}
       >
-        <Form
-          layout="vertical"
-        >
-{/*          <div className="settings-video-container">
-            <video
-              id="settings-video"
-              autoPlay={true}
-              playsInline={true}
-              muted={true}
-            />
-          </div>*/}
+        <Form layout="vertical">
           <Form.Item label="Camera">
-            <Select 
+            <Select
               defaultValue={video_input_device_id}
               style={{ width: '100%' }}
-              options={video_inputs.map(item => ({ label: item.label, value: item.deviceId }))} 
+              options={video_inputs.map((item) => ({
+                label: item.label,
+                value: item.deviceId,
+              }))}
+              onChange={value => setVideoInputDeviceId(value)}
             />
           </Form.Item>
           <Form.Item label="Audio Input">
             <Select
               defaultValue={audio_input_device_id}
               style={{ width: '100%' }}
-              options={audio_inputs.map(item => ({ label: item.label, value: item.deviceId }))} 
+              options={audio_inputs.map((item) => ({
+                label: item.label,
+                value: item.deviceId,
+              }))}
+              onChange={value => setAudioInputDeviceId(value)}
             />
           </Form.Item>
           <Form.Item label="Audio Output">
-            <Select 
+            <Select
               defaultValue={audio_output_device_id}
               style={{ width: '100%' }}
-              options={audio_outputs.map(item => ({ label: item.label, value: item.deviceId }))} 
+              options={audio_outputs.map((item) => ({
+                label: item.label,
+                value: item.deviceId,
+              }))}
+              onChange={value => setAudioOutputDeviceId(value)}
             />
           </Form.Item>
         </Form>
       </Modal>
     </>
-  )
+  );
 }
 
 export default VideoControls;

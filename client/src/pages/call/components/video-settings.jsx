@@ -2,8 +2,8 @@ import React from 'react';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { Container, Row, Col, Form, Button, ButtonGroup, Image } from 'react-bootstrap';
-import { FaMicrophone, FaMicrophoneSlash, FaVideo, FaVideoSlash } from 'react-icons/fa';
-import Logo from '@/assets/logo.png'
+import { MdMic, MdMicOff, MdVideocam, MdVideocamOff } from 'react-icons/md';
+import Logo from '@/assets/logo.png';
 
 import { useRoom } from '../room-context';
 import { useVideoCall } from '../video-call-context';
@@ -12,13 +12,10 @@ function VideoSettings({ user }) {
   const { joinRoom } = useRoom();
   const { setVideoEnabled, setAudioEnabled } = useVideoCall();
 
-  const onSubmit = async (values, { setSubmitting, setErrors }) => {
+  const onSubmit = async (values, { setSubmitting }) => {
     setVideoEnabled(values.video);
     setAudioEnabled(values.audio);
-    joinRoom(
-      user.user_id,
-      values.username
-    );
+    joinRoom(user.user_id, values.username);
   };
 
   return (
@@ -29,77 +26,71 @@ function VideoSettings({ user }) {
           video: false,
           audio: false,
         }}
-        validationSchema={() => Yup.object().shape({
-          username: Yup.string().required('Required'),
-        })}
+        validationSchema={() =>
+          Yup.object().shape({
+            username: Yup.string().required('Required'),
+          })
+        }
         onSubmit={onSubmit}
       >
-      {({
-        values,
-        errors,
-        touched,
-        handleChange,
-        handleBlur,
-        handleSubmit,
-        isSubmitting,
-        setFieldValue,
-        setValues
-       }) => (
-          <Form 
-            onSubmit={handleSubmit} 
-            autoComplete="off"
-          >
+        {({
+          values,
+          errors,
+          touched,
+          handleChange,
+          handleBlur,
+          handleSubmit,
+          isSubmitting,
+          setFieldValue,
+        }) => (
+          <Form onSubmit={handleSubmit} autoComplete="off">
             <Row>
-              <Col 
-                md={{ span: 4, offset: 4 }} 
+              <Col
+                md={{ span: 4, offset: 4 }}
                 className="vh-100 d-flex justify-content-center align-items-center"
               >
                 <div className="w-100">
-                  <div
-                    className="d-flex justify-content-center align-items-center mb-5"
-                  >
-                    <Image 
-                      className="" 
+                  <div className="d-flex justify-content-center align-items-center mb-5">
+                    <Image
                       src={Logo}
                       alt="logo"
-                      style={{
-                        width: 150
-                      }}
+                      style={{ width: 150 }}
                     />
                   </div>
                   <Form.Group className="mb-3">
                     <Form.Label className="text-white">Username</Form.Label>
-                    <Form.Control 
+                    <Form.Control
                       name="username"
                       placeholder="Username"
                       value={values.username}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={errors.username && touched.username && 'is-invalid'}
+                      className={
+                        errors.username && touched.username && 'is-invalid'
+                      }
                     />
-                    {errors.username && touched.username && <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>}
+                    {errors.username && touched.username && (
+                      <Form.Control.Feedback type="invalid">
+                        {errors.username}
+                      </Form.Control.Feedback>
+                    )}
                   </Form.Group>
-                  <ButtonGroup
-                    size="lg"
-                    className=""
-                  >
+                  <ButtonGroup size="lg">
                     <Button
                       variant="secondary"
                       onClick={() => setFieldValue('audio', !values.audio)}
                     >
-                      {values.audio ? <FaMicrophone /> : <FaMicrophoneSlash />}
+                      {values.audio ? <MdMic /> : <MdMicOff />}
                     </Button>
                     <Button
                       variant="secondary"
                       onClick={() => setFieldValue('video', !values.video)}
                     >
-                      {values.video ? <FaVideo /> : <FaVideoSlash />}
+                      {values.video ? <MdVideocam /> : <MdVideocamOff />}
                     </Button>
                   </ButtonGroup>
-                  <div
-                    className="d-flex justify-content-end align-items-center"
-                  >
-                    <Button 
+                  <div className="d-flex justify-content-end align-items-center">
+                    <Button
                       type="submit"
                       variant="danger"
                       disabled={isSubmitting}
@@ -114,7 +105,7 @@ function VideoSettings({ user }) {
         )}
       </Formik>
     </Container>
-  )
+  );
 }
 
 export default VideoSettings;

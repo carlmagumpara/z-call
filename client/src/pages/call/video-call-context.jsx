@@ -1,32 +1,34 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 
 const Context = createContext();
 
 export const useVideoCall = () => useContext(Context);
 
-const defaultMediaConfig = { 
-  video: {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    frameRate: { ideal: 30, max: 60 }
-  },
-  audio: true,
-};
-
 function VideoCallProvider({ children }) {
+  const pc = useRef({});
+  const audio = useRef({});
   const [video_enabled, setVideoEnabled] = useState(false);
   const [audio_enabled, setAudioEnabled] = useState(false);
   const [video_inputs, setVideoInputs] = useState([]);
   const [audio_inputs, setAudioInputs] = useState([]);
   const [audio_outputs, setAudioOutputs] = useState([]);
   const [local_stream, setLocalStream] = useState(null);
-  const [screen_stream, setScreenStream] = useState(null);
   const [screen_sharing, setScreenSharing] = useState(false);
   const [layout, setLayout] = useState('single-grid');
+  const [media_status, setMediaStatus] = useState({});
 
-  const [video_input_device_id, setVideoInputDeviceId] = useState('');
-  const [audio_input_device_id, setAudioInputDeviceId] = useState('');
-  const [audio_output_device_id, setAudioOutputDeviceId] = useState('');
+  const [video_input_device_id, setVideoInputDeviceId] = useState(null);
+  const [audio_input_device_id, setAudioInputDeviceId] = useState(null);
+  const [audio_output_device_id, setAudioOutputDeviceId] = useState(null);
+
+  const defaultMediaConfig = { 
+    video: {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 30, max: 60 }
+    },
+    audio: true,
+  };
 
   const getMediaDevices = async (kind) => {
     if(!kind) return [];
@@ -48,126 +50,107 @@ function VideoCallProvider({ children }) {
     }
   };
 
-  const setupLocalStream = async () => {
+  const updatePcStreams = (stream) => {
+    if (!stream) return;
+
+    stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
+    stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
+
+    Object.keys(pc.current || {}).forEach(sid => {
+      const senders = pc.current[sid].getSenders();
+
+      const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+      if (videoSender) {
+        const newVideoTrack = stream.getVideoTracks()[0];
+        videoSender.replaceTrack(newVideoTrack);
+      }
+
+      const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+      if (audioSender) {
+        const newAudioTrack = stream.getAudioTracks()[0];
+        audioSender.replaceTrack(newAudioTrack);
+      }
+    });
+  };
+
+  const replaceTrack = (kind, newTrack) => {
+    if (!local_stream || !newTrack) return;
+
+    const oldTrack = local_stream.getTracks().find(t => t.kind === kind);
+    if (oldTrack) {
+      oldTrack.stop();
+      local_stream.removeTrack(oldTrack);
+    }
+
+    local_stream.addTrack(newTrack);
+  };
+
+  const initializeLocalStream = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(defaultMediaConfig);
+      const constraints = {
+        video: video_input_device_id
+          ? {
+              deviceId: { exact: video_input_device_id },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30, max: 60 },
+            }
+          : defaultMediaConfig.video,
+
+        audio: audio_input_device_id
+          ? { deviceId: { exact: audio_input_device_id } }
+          : defaultMediaConfig.audio,
+      };
+
+      if (local_stream) {
+        local_stream.getTracks().forEach(track => track.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
       stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
-      setVideoInputDeviceId(stream.getVideoTracks()[0].getSettings().deviceId);
-      setAudioInputDeviceId(stream.getAudioTracks()[0].getSettings().deviceId);
+
+      if(!video_input_device_id) {
+        setVideoInputDeviceId(stream.getVideoTracks()[0].getSettings().deviceId);
+      }
+      
+      if(!audio_input_device_id) {
+        setAudioInputDeviceId(stream.getAudioTracks()[0].getSettings().deviceId);
+      }
+
+      updatePcStreams(stream);
       setLocalStream(stream);
+      return stream;
     } catch (err) {
       console.error("Failed to get local stream", err);
+    }
+  };
+
+  const setupScreenShare = async () => {
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia(defaultMediaConfig);
+      const screenTrack = screenStream.getVideoTracks()[0];
+      screenTrack.onended = async () => stopScreenShare();
+      replaceTrack('video', screenTrack);
+      updatePcStreams(screenStream);
+      setScreenSharing(true);
+      return true;
+    } catch (err) {
+      console.error("Failed to get local stream", err);
+      return false;
     }
   };
 
   const stopScreenShare = async () => {
     console.log("Screen sharing has ended");
     try {
-      const newStream = await navigator.mediaDevices.getUserMedia(defaultMediaConfig);
-      const newVideoTrack = newStream.getVideoTracks()[0];
-      const newAudioTrack = newStream.getAudioTracks()[0];
-      if (newVideoTrack) newVideoTrack.enabled = video_enabled;
-      if (newAudioTrack) newAudioTrack.enabled = audio_enabled;
-      const oldVideoTrack = local_stream?.getVideoTracks()[0];
-      if (oldVideoTrack) {
-        oldVideoTrack.stop();
-        local_stream.removeTrack(oldVideoTrack);
-      }
-      local_stream.addTrack(newVideoTrack);
-      if (newAudioTrack) {
-        const oldAudioTrack = local_stream?.getAudioTracks()[0];
-        if (oldAudioTrack) {
-          oldAudioTrack.stop();
-          local_stream.removeTrack(oldAudioTrack);
-        }
-        local_stream.addTrack(newAudioTrack);
-      }
-
-      setLocalStream(newStream);
-      setScreenStream(null);
+      await initializeLocalStream();
       setScreenSharing(false);
+      return true;
     } catch (err) {
       console.error("Error restoring camera:", err);
+      return false;
     }
-  };
-
-  const setupScreenShare = async () => {
-    try {
-      const screen_stream = await navigator.mediaDevices.getDisplayMedia(defaultMediaConfig);
-      const screen_track = screen_stream.getVideoTracks()[0];
-      screen_track.onended = async () => stopScreenShare();
-      local_stream.removeTrack(local_stream.getVideoTracks()[0]);
-      local_stream.addTrack(screen_track);
-      setScreenStream(screen_stream);
-      setScreenSharing(true);
-    } catch (err) {
-      console.error("Failed to get local stream", err);
-    }
-  };
-
-  const switchVideo = async (deviceId) => {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { 
-          deviceId: { 
-          exact: deviceId 
-        } 
-      },
-      audio: false,
-    });
-
-    const newTrack = newStream.getVideoTracks()[0];
-    // setLocalStream(newStream);
-    
-    // if (pc) {
-    //   const sender = pc.getSenders().find(s => s.track?.kind === "video");
-    //   if (sender) await sender.replaceTrack(newTrack);
-    // }
-
-    // const oldTrack = localStream?.getVideoTracks()[0];
-    // if (oldTrack) {
-    //   oldTrack.stop();
-    //   localStream.removeTrack(oldTrack);
-    // }
-    // localStream.addTrack(newTrack);
-
-    // videoEl.srcObject = localStream;
-  };
-
-  const switchAudioInput = async (deviceId) => {
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: { exact: deviceId } },
-      video: false,
-    });
-
-    // const newTrack = newStream.getAudioTracks()[0];
-
-    // if (pc) {
-    //   const sender = pc.getSenders().find(s => s.track?.kind === "audio");
-    //   if (sender) await sender.replaceTrack(newTrack);
-    // }
-
-    // const oldTrack = localStream?.getAudioTracks()[0];
-    // if (oldTrack) {
-    //   oldTrack.stop();
-    //   localStream.removeTrack(oldTrack);
-    // }
-    // localStream.addTrack(newTrack);
-
-    // videoEl.srcObject = localStream;
-  };
-
-  const switchAudioOutput = async (deviceId) => {
-    // if (typeof videoEl.sinkId !== "undefined") {
-    //   try {
-    //     await videoEl.setSinkId(deviceId);
-    //     console.log(`Audio output set to device: ${deviceId}`);
-    //   } catch (err) {
-    //     console.error("Error setting audio output:", err);
-    //   }
-    // } else {
-    //   console.warn("Audio output selection is not supported in this browser.");
-    // }
   };
 
   useEffect(() => {
@@ -195,6 +178,8 @@ function VideoCallProvider({ children }) {
   return (
     <Context.Provider
       value={{
+        pc,
+        audio,
         video_enabled,
         audio_enabled,
         video_inputs,
@@ -203,18 +188,22 @@ function VideoCallProvider({ children }) {
         video_input_device_id,
         audio_input_device_id,
         audio_output_device_id,
+        setVideoInputDeviceId,
+        setAudioInputDeviceId,
+        setAudioOutputDeviceId,
         local_stream,
-        screen_stream,
         screen_sharing,
         layout,
         setScreenSharing,
-        setupLocalStream,
+        initializeLocalStream,
         setupScreenShare,
         stopScreenShare,
         setVideoEnabled,
         setAudioEnabled,
         setTrackEnabled,
-        setLayout
+        setLayout,
+        media_status, 
+        setMediaStatus
       }}
     >
       {children}

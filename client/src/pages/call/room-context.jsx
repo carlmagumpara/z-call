@@ -38,13 +38,23 @@ function RoomProvider({ children, roomId, user }) {
       socket.emit("leave", { 
         room_id: roomId,
       });
+
+      setJoined(false);
     };
+
+    const handleVisibilityChange = () => {
+      if(document.visibilityState == 'hidden') {
+        handleBeforeUnload();
+      }
+    }
 
     socket.on("joining", handleJoinRoom);
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
     socket.on("joined", handleJoined);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    // window.addEventListener('pagehide', handleBeforeUnload);
+    // window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       socket.off("joining", handleJoinRoom);
@@ -53,6 +63,8 @@ function RoomProvider({ children, roomId, user }) {
       socket.off("joined", handleJoined);
       handleBeforeUnload();
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      // window.removeEventListener('pagehide', handleBeforeUnload);
+      // window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [roomId]);
 
