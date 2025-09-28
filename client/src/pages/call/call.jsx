@@ -1,16 +1,15 @@
 import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
 import { Container, Button, ButtonGroup } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
 import Video from './components/video';
+import SingleVideo from './components/single-video';
 import VideoControls from './components/video-controls';
 import { useRoom } from './room-context';
 import { useVideoCall } from './video-call-context';
 
 function Call() {
-  const navigate = useNavigate();
   const socket_id = socket.id;
   const { roomId, users } = useRoom();
   const {
@@ -36,29 +35,40 @@ function Call() {
 
   useEffect(() => {
     initializeLocalStream();
-  }, [video_input_device_id, audio_input_device_id]);
+  }, []);
+
+  const updateRemoteStreams = (peerId, remoteStream) => {
+    const videoTrack = remoteStream.getVideoTracks()[0];
+    const audioTrack = remoteStream.getAudioTracks()[0];
+    const remoteVideoEl = document.getElementById(`remote-video-${peerId}`);
+    const remoteAudioEl = document.getElementById(`remote-audio-${peerId}`);
+    if (remoteVideoEl) {
+      remoteVideoEl.srcObject = new MediaStream([videoTrack]);
+    };
+    if(remoteAudioEl) {
+      remoteAudioEl.srcObject = new MediaStream([audioTrack]);
+    }
+  };
+
+  useEffect(() => {
+    const localVideoEl = document.getElementById("local");
+    if (localVideoEl) {
+      localVideoEl.srcObject = local_stream;
+    };
+
+    Object.keys(pc.current || {}).forEach(peerId => {
+      const remoteStream = pc.current[peerId].remoteStream;
+      updateRemoteStreams(peerId, remoteStream);
+    });
+  }, [local_stream, layout]);
 
   useEffect(() => {
 
     const onTrack = (event, peerId) => {
       console.log('new track added: ', peerId);
       const remoteStream = event.streams[0];
-      const remoteVideoEl = document.getElementById(`remote-${peerId}`);
-      if (remoteVideoEl) {
-        remoteVideoEl.srcObject = remoteStream
-      };
       pc.current[peerId].remoteStream = remoteStream;
-      try {
-        if (!audio.current[peerId]) {
-          const audioEl = new Audio();
-          audioEl.autoplay = true;
-          audioEl.style.display = 'none';
-          audio.current[peerId] = audioEl;
-        }
-        audio.current[peerId].srcObject = remoteStream;
-      } catch (error) {
-        console.log(error)
-      }
+      updateRemoteStreams(peerId, remoteStream);
     };
 
     const onIceCandidate = (event, peerId) => {
@@ -247,8 +257,6 @@ function Call() {
     socket.on("media-status", handleMediaStatus);
 
     return () => {
-      Object.values(pc.current).forEach(conn => conn.close());
-      pc.current = {};
       socket.off("offer", handleOffer);
       socket.off("answer", handleAnswer);
       socket.off("ice-candidate", handleIceCandidate);
@@ -257,12 +265,12 @@ function Call() {
   }, [users, local_stream]);
 
   useEffect(() => {
-    Object.keys(pc.current || {}).forEach(sid => {
-      const user = users.find(item => item.socket_id === sid);
+    Object.keys(pc.current || {}).forEach(peerId => {
+      const user = users.find(item => item.socket_id === peerId);
       if (!user) {
-        console.log('Peer removed: ', sid);
-        pc.current[sid].close();
-        delete pc.current[sid];
+        console.log('Peer removed: ', peerId);
+        pc.current[peerId].close();
+        delete pc.current[peerId];
       }
     });
   }, [users]);
@@ -279,78 +287,36 @@ function Call() {
     });
   }, [video_enabled, audio_enabled, screen_sharing]);
 
-  useEffect(() => {
-    const localVideoEl = document.getElementById("local");
-    const selectedVideoEl = document.getElementById("selected");
-
-    if (localVideoEl) {
-      localVideoEl.srcObject = local_stream;
-    };
-
-    if(layout === 'single-grid') {
-      if (selectedVideoEl) {
-        if(selected && selected.user?.socket_id !== socket_id) {
-          selectedVideoEl.srcObject = pc.current[selected.user.socket_id]?.remoteStream;
-        } else {
-          selectedVideoEl.srcObject = local_stream;
-        }
-      }
-    }
-
-    Object.keys(pc.current || {}).forEach(sid => {
-      const videoEl = document.getElementById(`remote-${sid}`);
-      if (videoEl) {
-        videoEl.srcObject = pc.current[sid].remoteStream;
-      } else {
-        pc.current[sid].close();
-        delete pc.current[sid];
-      }
-    });
-  }, [users, selected, layout, local_stream]);
-
-  const renderVideos = () => {
+  const getVideos = () => {
     const defaultMedia = {
       screen_sharing: false,
       audio: false, 
       video: false 
     };
 
-    const videos = users
-    .map(item => {
-      if(item.socket_id === socket_id) {
-        return {
-          id: 'local',
-          autoPlay: true,
-          playsInline: true,
-          muted: true,
-          myself: true,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        }
-      }
+    return users
+    .map(item => ({
+      id: item.socket_id,
+      myself: item.socket_id === socket_id,
+      user: item,
+      media: media_status[item.socket_id] || defaultMedia,
+    }));
+  };
 
-      return {
-        id: `remote-${item.socket_id}`,
-        autoPlay: true,
-        playsInline: true,
-        myself: false,
-        user: item,
-        media: media_status[item.socket_id] || defaultMedia,
-      }
-    });
+  const renderSingleVideo = () => {
+    const localVideo = getVideos().find(item => item.myself);
+    const singleVideo = getVideos().find(item => item.id === selected);
 
-    console.log('videos', videos);
-
-    return videos.map(item => (
-      <Video
-        {...item}
-        key={item.id}
-        onVideoSelect={() => {
-          setLayout('single-grid');
-          setSelected(item);
-        }}
+    return (
+      <SingleVideo 
+        selected={(selected && singleVideo) ? singleVideo : localVideo} 
       />
-    ));
+    );
+  };
+
+  const onVideoSelect = item => {
+    setLayout('single-grid');
+    setSelected(item);
   };
 
   return (
@@ -359,31 +325,35 @@ function Call() {
         {layout === 'grid' ? (
           <div className="video-call-container-grid">
             <div className="video-masonry">
-              {renderVideos()}
+              {getVideos().map(item => (
+                <Video
+                  key={item.id}
+                  onVideoSelect={onVideoSelect}
+                  {...item}
+                />
+              ))}
             </div>
           </div>
         ) : (
           <div className="video-call-container-single-grid">
             <div className="main-video">
-              <video 
-                id="selected"
-                autoPlay={true}
-                playsInline={true}
-                muted={true}
-              ></video>
+              {renderSingleVideo()}
             </div>
             <div className="side-videos">
-              {renderVideos()}
+              {getVideos().map(item => (
+                <Video
+                  key={item.id}
+                  onVideoSelect={onVideoSelect}
+                  {...item}
+                />
+              ))}
             </div>
           </div>
         )}
       </div>
       <div className="flex-shrink-1 video-call-controls-container">
         <div
-          className="d-flex justify-content-center align-items-center w-100 h-100"
-          style={{
-            bottom: 0
-          }}
+          className="d-flex justify-content-center align-items-center w-100 h-100 bottom-0"
         >
           <VideoControls />
         </div>

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
 import { Button, ButtonGroup } from 'react-bootstrap';
 import {
   MdVideocam,
@@ -17,7 +16,6 @@ import { PiVideoConference } from 'react-icons/pi';
 import { useVideoCall } from '../video-call-context';
 
 function VideoControls() {
-  const navigate = useNavigate();
   const {
     video_inputs,
     audio_inputs,
@@ -37,6 +35,7 @@ function VideoControls() {
     stopScreenShare,
     setLayout,
     initializeLocalStream,
+    endCall
   } = useVideoCall();
   const [open, setOpen] = useState(false);
 
@@ -90,7 +89,7 @@ function VideoControls() {
         <Popconfirm
           title="Leave Call?"
           description="Are you sure you want to leave this call?"
-          onConfirm={() => navigate('/')}
+          onConfirm={() => endCall()}
           onCancel={() => {}}
           okText="Yes"
           cancelText="No"
@@ -100,7 +99,6 @@ function VideoControls() {
           </Button>
         </Popconfirm>
       </ButtonGroup>
-
       <Modal
         title="Settings"
         closable={{ 'aria-label': 'Custom Close Button' }}

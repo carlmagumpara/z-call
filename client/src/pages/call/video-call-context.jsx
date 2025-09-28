@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router';
 
 const Context = createContext();
 
 export const useVideoCall = () => useContext(Context);
 
 function VideoCallProvider({ children }) {
+  const navigate = useNavigate();
   const pc = useRef({});
   const audio = useRef({});
   const [video_enabled, setVideoEnabled] = useState(false);
@@ -16,7 +18,6 @@ function VideoCallProvider({ children }) {
   const [screen_sharing, setScreenSharing] = useState(false);
   const [layout, setLayout] = useState('single-grid');
   const [media_status, setMediaStatus] = useState({});
-
   const [video_input_device_id, setVideoInputDeviceId] = useState(null);
   const [audio_input_device_id, setAudioInputDeviceId] = useState(null);
   const [audio_output_device_id, setAudioOutputDeviceId] = useState(null);
@@ -56,8 +57,8 @@ function VideoCallProvider({ children }) {
     stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
     stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
 
-    Object.keys(pc.current || {}).forEach(sid => {
-      const senders = pc.current[sid].getSenders();
+    Object.keys(pc.current || {}).forEach(peerId => {
+      const senders = pc.current[peerId].getSenders();
 
       const videoSender = senders.find(s => s.track && s.track.kind === 'video');
       if (videoSender) {
@@ -153,9 +154,25 @@ function VideoCallProvider({ children }) {
     }
   };
 
-  useEffect(() => {
-    return () => local_stream?.getTracks().forEach(track => track.stop());
-  }, []);
+  const endCall = () => {
+    local_stream?.getTracks().forEach(track => track.stop());
+    Object.values(pc.current).forEach(conn => {
+      conn.getSenders().forEach(sender => {
+        if (sender.track) {
+          sender.track.stop();
+        }
+      });
+      conn.getReceivers().forEach(receiver => {
+        if (receiver.track) {
+          receiver.track.stop();
+        }
+      });
+      conn.close();
+    });
+    pc.current = {};
+
+    navigate('/');
+  };
 
   useEffect(() => {
     const initMediaDevices = async () => {
@@ -203,7 +220,8 @@ function VideoCallProvider({ children }) {
         setTrackEnabled,
         setLayout,
         media_status, 
-        setMediaStatus
+        setMediaStatus,
+        endCall
       }}
     >
       {children}

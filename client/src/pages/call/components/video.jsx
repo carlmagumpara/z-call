@@ -1,20 +1,24 @@
-import { 
-  MdVideocam,
-  MdVideocamOff,
-  MdMic,
-  MdMicOff
-} from 'react-icons/md';
+import { MdVideocam, MdVideocamOff, MdMic, MdMicOff } from 'react-icons/md';
 
-function Video({ myself, user, media, onVideoSelect, ...videoProps }) {
+function Video({ id, myself, user, media, onVideoSelect }) {
   return (
     <div
       className="peer-tile"
-      onClick={() => onVideoSelect()}
+      onClick={() => onVideoSelect(myself ? null : id)}
     >
       <video
-        {...videoProps}
+        id={myself ? 'local' : `remote-video-${id}`}
+        muted={myself}
+        autoPlay={true}
+        playsInline={true}
         className="peer-video"
       />
+      {!myself ? (
+        <audio 
+          id={`remote-audio-${id}`}
+          autoPlay={true}
+        />
+      ) : null}
       <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
         <p className="left-name">
           {myself ? `${user.username} (You)` : user.username}
