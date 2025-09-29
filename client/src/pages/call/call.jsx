@@ -329,7 +329,6 @@ function Call() {
     };
 
     if (local_stream && users.length > 1) {
-      console.log('setTimeout(() => initializePeersConnection("main"), 3000);');
       setTimeout(() => initializePeersConnection('main'), 3000);
     }
 
@@ -405,18 +404,10 @@ function Call() {
   };
 
   useEffect(() => {
-    const startScreenShare = async () => {
-      try {
-        await initializePeersConnection('screen');
-      } catch (err) {
-        console.error("Screen share failed:", err);
-      }
-    };
-
-    if(screen_stream) {
-      startScreenShare();
+    if(screen_stream && users.length > 1) {
+      setTimeout(() => initializePeersConnection('screen'), 3000);
     }
-  }, [screen_stream]);
+  }, [users, screen_stream]);
 
   return (
     <div className="d-flex flex-column w-100 vh-100">
