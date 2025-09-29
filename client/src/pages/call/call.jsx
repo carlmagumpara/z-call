@@ -114,6 +114,10 @@ function Call() {
       }
       if(type === 'screen') {
         if (pc.current[peerId]) {
+          const remoteVideoEl = document.getElementById(`remote-screen-${peerId}`);
+          if (remoteVideoEl) {
+            remoteVideoEl.srcObject = null;
+          };
           delete pc.current[peerId][type];
         }
       }
