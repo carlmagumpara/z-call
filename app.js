@@ -96,21 +96,24 @@ io.on('connection', (socket) => {
   socket.on("offer", (data) => {
     socket.to(data.to).emit("offer", { 
       from: socket.id, 
-      sdp: data.sdp 
+      sdp: data.sdp,
+      type: data.type,
     });
   });
 
   socket.on("answer", (data) => {
     socket.to(data.to).emit("answer", { 
       from: socket.id, 
-      sdp: data.sdp 
+      sdp: data.sdp,
+      type: data.type,
     });
   });
 
   socket.on("ice-candidate", (data) => {
     socket.to(data.to).emit("ice-candidate", { 
       from: socket.id, 
-      candidate: data.candidate 
+      candidate: data.candidate,
+      type: data.type,
     });
   });
 

@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { MdVideocam, MdVideocamOff, MdMic, MdMicOff } from 'react-icons/md';
 import { useVideoCall } from '../video-call-context';
 
-function SingleVideo({ selected }) {
+function SingleVideo({ selected, type = 'main' }) {
   const { pc, local_stream } = useVideoCall();
   const { id, myself, user, media } = selected || {};
 
   useEffect(() => {
     const selectedVideoEl = document.getElementById("selected");
-    const stream = pc.current[selected?.id]?.remoteStream || local_stream;
+    const stream = pc.current[id]?.[type]?.remoteStream || local_stream;
     if(selectedVideoEl && stream) {
       const videoTrack = stream.getVideoTracks()[0];
       selectedVideoEl.srcObject = new MediaStream([videoTrack]);

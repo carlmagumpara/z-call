@@ -15,6 +15,7 @@ function VideoCallProvider({ children }) {
   const [audio_inputs, setAudioInputs] = useState([]);
   const [audio_outputs, setAudioOutputs] = useState([]);
   const [local_stream, setLocalStream] = useState(null);
+  const [screen_stream, setScreenStream] = useState(null);
   const [screen_sharing, setScreenSharing] = useState(false);
   const [layout, setLayout] = useState('single-grid');
   const [media_status, setMediaStatus] = useState({});
@@ -66,29 +67,66 @@ function VideoCallProvider({ children }) {
     }
   };
 
-  const updatePcStreams = (stream, kind = null) => {
+  const addPcStreamsTrack = (stream, kind = null) => {
     if (!stream) return;
 
     Object.keys(pc.current || {}).forEach(peerId => {
-      const senders = pc.current[peerId].getSenders();
+      for (const type of ['main', 'screen']) {
+        const senders = pc.current[peerId]?.[type]?.getSenders();
 
-      if (kind === null || kind === 'video') {
-        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-        if (videoSender) {
-          stream.getVideoTracks().forEach(track => (track.enabled = video_enabled));
-          const newVideoTrack = stream.getVideoTracks()[0];
-          if (newVideoTrack) videoSender.replaceTrack(newVideoTrack);
+        if (kind === null || kind === 'video') {
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            stream.getVideoTracks().forEach(track => (track.enabled = video_enabled));
+            const newVideoTrack = stream.getVideoTracks()[0];
+            if (newVideoTrack) videoSender.replaceTrack(newVideoTrack);
+          }
+        }
+
+        if (kind === null || kind === 'audio') {
+          const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+          if (audioSender) {
+            stream.getAudioTracks().forEach(track => (track.enabled = audio_enabled));
+            const newAudioTrack = stream.getAudioTracks()[0];
+            if (newAudioTrack) audioSender.replaceTrack(newAudioTrack);
+          }
         }
       }
+    });
+  };
 
-      if (kind === null || kind === 'audio') {
-        const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-        if (audioSender) {
-          stream.getAudioTracks().forEach(track => (track.enabled = audio_enabled));
-          const newAudioTrack = stream.getAudioTracks()[0];
-          if (newAudioTrack) audioSender.replaceTrack(newAudioTrack);
+  const removePcStreamsTrack = (type, kind = null) => {
+    Object.keys(pc.current || {}).forEach(peerId => {
+      const conn = pc.current[peerId]?.[type];
+      if (!conn) return;
+
+      conn.getSenders().forEach(sender => {
+        const track = sender.track;
+        if (!track) return;
+
+        if (!kind || track.kind === kind) {
+          try {
+            track.stop();
+            conn.removeTrack(sender);
+            console.log(`Stopped & removed ${track.kind} track from ${peerId} (${type})`);
+          } catch (err) {
+            console.warn(`Failed to remove track ${track.kind} from ${peerId}`, err);
+          }
         }
+      });
+
+      try {
+        conn.close();
+        console.log(`Closed connection for ${peerId} (${type})`);
+      } catch (err) {
+        console.warn(`Error closing connection for ${peerId} (${type})`, err);
       }
+
+      if (pc.current[peerId]) {
+        delete pc.current[peerId][type];
+      }
+
+      console.log(pc.current[peerId]);
     });
   };
 
@@ -111,7 +149,7 @@ function VideoCallProvider({ children }) {
       stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
       setVideoInputDeviceId(stream.getVideoTracks()[0].getSettings().deviceId);
       setAudioInputDeviceId(stream.getAudioTracks()[0].getSettings().deviceId);
-      updatePcStreams(stream);
+      addPcStreamsTrack(stream);
       setLocalStream(stream);
       return stream;
     } catch (err) {
@@ -123,9 +161,8 @@ function VideoCallProvider({ children }) {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia(defaultMediaConfig);
       const screenTrack = stream.getVideoTracks()[0];
-      screenTrack.onended = async () => stopScreenShare();
-      replaceTrack(screenTrack, 'video');
-      updatePcStreams(stream, 'video');
+      screenTrack.onended = async () => stopScreenShare();      
+      setScreenStream(stream);
       setScreenSharing(true);
       return true;
     } catch (err) {
@@ -137,15 +174,12 @@ function VideoCallProvider({ children }) {
   const stopScreenShare = async () => {
     console.log("Screen sharing has ended");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        ...constraints,
-        audio: false
+      screen_stream?.getTracks().forEach(track => {
+        track.stop();
       });
-      stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
-      const videoTrack = stream.getVideoTracks()[0];
-      replaceTrack(videoTrack, 'video');
-      updatePcStreams(stream, 'video');
+      setScreenStream(null);
       setScreenSharing(false);
+      removePcStreamsTrack('screen', 'video');
       return true;
     } catch (err) {
       console.error("Error restoring camera:", err);
@@ -169,7 +203,7 @@ function VideoCallProvider({ children }) {
       stream.getVideoTracks().forEach(track => track.enabled = video_enabled);
       const videoTrack = stream.getVideoTracks()[0];
       replaceTrack(videoTrack, 'video');
-      updatePcStreams(stream, 'video');
+      addPcStreamsTrack(stream, 'video');
       setVideoInputDeviceId(deviceId);
       return true;
     } catch (err) {
@@ -191,7 +225,7 @@ function VideoCallProvider({ children }) {
       stream.getAudioTracks().forEach(track => track.enabled = audio_enabled);
       const audioTrack = stream.getAudioTracks()[0];
       replaceTrack(audioTrack, 'audio');
-      updatePcStreams(stream, 'audio');
+      addPcStreamsTrack(stream, 'audio');
       setAudioInputDeviceId(deviceId);
       return true;
     } catch (err) {
@@ -219,21 +253,7 @@ function VideoCallProvider({ children }) {
 
   const endCall = () => {
     local_stream?.getTracks().forEach(track => track.stop());
-    Object.values(pc.current).forEach(conn => {
-      conn.getSenders().forEach(sender => {
-        if (sender.track) {
-          sender.track.stop();
-        }
-      });
-      conn.getReceivers().forEach(receiver => {
-        if (receiver.track) {
-          receiver.track.stop();
-        }
-      });
-      conn.close();
-    });
-    pc.current = {};
-
+    screen_stream?.getTracks().forEach(track => track.stop());
     navigate('/');
   };
 
@@ -268,12 +288,15 @@ function VideoCallProvider({ children }) {
         video_input_device_id,
         audio_input_device_id,
         audio_output_device_id,
+        local_stream,
+        screen_stream,
+        screen_sharing,
+        layout,
+        media_status, 
         setVideoInputDeviceId,
         setAudioInputDeviceId,
         setAudioOutputDeviceId,
-        local_stream,
-        screen_sharing,
-        layout,
+        setScreenStream,
         setScreenSharing,
         initializeLocalStream,
         setupScreenShare,
@@ -282,7 +305,6 @@ function VideoCallProvider({ children }) {
         setAudioEnabled,
         setTrackEnabled,
         setLayout,
-        media_status, 
         setMediaStatus,
         switchVideoInput,
         switchAudioInput,

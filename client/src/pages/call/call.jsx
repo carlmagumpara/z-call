@@ -10,6 +10,7 @@ import { useRoom } from './room-context';
 import { useVideoCall } from './video-call-context';
 
 function Call() {
+  const initilize = useRef(false);
   const socket_id = socket.id;
   const { roomId, users } = useRoom();
   const {
@@ -19,6 +20,7 @@ function Call() {
     audio_input_device_id,
     audio_output_device_id,
     local_stream,
+    screen_stream,
     video_enabled, 
     audio_enabled,
     screen_sharing,
@@ -28,211 +30,293 @@ function Call() {
     setTrackEnabled,
     setLayout,
     media_status, 
-    setMediaStatus
+    setMediaStatus,
   } = useVideoCall();
   const pendingCandidates = useRef({});
   const [selected, setSelected] = useState(null);
+
+  // const ss = useRef(null);
 
   useEffect(() => {
     initializeLocalStream();
   }, []);
 
-  const updateRemoteStreams = async (peerId, remoteStream) => {
-    const videoTrack = remoteStream.getVideoTracks()[0];
-    const audioTrack = remoteStream.getAudioTracks()[0];
-    const remoteVideoEl = document.getElementById(`remote-video-${peerId}`);
-    const remoteAudioEl = document.getElementById(`remote-audio-${peerId}`);
-    if (remoteVideoEl) {
-      remoteVideoEl.srcObject = new MediaStream([videoTrack]);
-    };
-    if(remoteAudioEl) {
-      remoteAudioEl.srcObject = new MediaStream([audioTrack]);
-    }    
+  const updateRemoteStreams = async (peerId, remoteStream, type) => {
+    console.log('updateRemoteStreams', peerId, remoteStream, type);
+
+    if(type === 'main') {
+      const videoTrack = remoteStream.getVideoTracks()[0];
+      const audioTrack = remoteStream.getAudioTracks()[0];
+      const remoteVideoEl = document.getElementById(`remote-video-${peerId}`);
+      const remoteAudioEl = document.getElementById(`remote-audio-${peerId}`);
+      if (remoteVideoEl) {
+        remoteVideoEl.srcObject = new MediaStream([videoTrack]);
+      };
+      if(remoteAudioEl) {
+        remoteAudioEl.srcObject = new MediaStream([audioTrack]);
+      }
+    }
+
+    if(type === 'screen') {
+      const videoTrack = remoteStream.getVideoTracks()[0];
+      const remoteVideoEl = document.getElementById(`remote-screen-${peerId}`);
+      if (remoteVideoEl) {
+        remoteVideoEl.srcObject = new MediaStream([videoTrack]);
+      };
+    }
   };
 
   useEffect(() => {
-    const localVideoEl = document.getElementById("local");
+    const localVideoEl = document.getElementById('local-video');
+    const localScreenVideoEl = document.getElementById('local-screen');
     if (localVideoEl) {
       localVideoEl.srcObject = local_stream;
     };
-
+    if (localScreenVideoEl) {
+      localScreenVideoEl.srcObject = screen_stream;
+    };
     Object.keys(pc.current || {}).forEach(peerId => {
-      const remoteStream = pc.current[peerId].remoteStream;
-      updateRemoteStreams(peerId, remoteStream);
+      for (const type of ['main', 'screen']) {
+        const remoteStream = pc.current[peerId]?.[type]?.remoteStream;
+        if(remoteStream) {
+          updateRemoteStreams(peerId, remoteStream, type);
+        }
+      }
     });
-  }, [local_stream, layout]);
+  }, [local_stream, screen_stream, layout]);
+
+  const onTrack = (event, peerId, type) => {
+    console.log('new track added: ', peerId, type);
+    const remoteStream = event.streams[0];
+    if(pc.current[peerId]?.[type]) {
+      pc.current[peerId][type].remoteStream = remoteStream;
+      updateRemoteStreams(peerId, remoteStream, type);
+    }
+  };
+
+  const onIceCandidate = (event, peerId, type) => {
+    if (event.candidate) {
+      socket.emit("ice-candidate", { 
+        to: peerId, 
+        candidate: event.candidate,
+        type
+      });
+    }
+  };
+
+  const onIceConnectionStateChange = (conn, peerId, type) => {
+    console.log("ICE state:", conn.iceConnectionState, type);
+    if (conn.iceConnectionState === "failed" ||
+        conn.iceConnectionState === "disconnected") {
+      console.warn("Connection failed with", peerId);
+      if(type === 'main') {
+        attemptReconnect(peerId, type);
+      }
+      if(type === 'screen') {
+        if (pc.current[peerId]) {
+          delete pc.current[peerId][type];
+        }
+      }
+    }
+  };
+
+  const attemptReconnect = async (peerId, type, retries = 10, delay = 1000) => {
+    console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`, type);
+    const conn = pc.current[peerId]?.[type];
+    const state = conn?.iceConnectionState;
+
+    if (!conn || ["closed", "disconnected", "failed"].includes(state)) {
+      return rebuildPeerConnection(peerId, type);
+    }
+
+    if (retries <= 0) {
+      console.log("Failed to reconnect", peerId, type);
+      return rebuildPeerConnection(peerId, type);
+    }
+
+    try {
+      const offer = await conn.createOffer({ iceRestart: true });
+      await conn.setLocalDescription(offer);
+      socket.emit("offer", { to: peerId, sdp: offer, type });
+      console.log("ICE restart triggered for", peerId, type);
+    } catch (err) {
+      console.error("ICE restart failed, rebuilding connection", err);
+      return rebuildPeerConnection(peerId, type); 
+    }
+
+    setTimeout(() => attemptReconnect(peerId, type, retries - 1, delay), delay);
+  };
+
+  const createPeerConnection = async (peerId, type) => {
+    console.log('createPeerConnection', peerId, type);
+    if (pc.current[peerId]?.[type]) return;
+    pc.current[peerId] ??= {};
+    pc.current[peerId][type] = new RTCPeerConnection(iceConfig);
+    const conn = pc.current[peerId][type];
+    if(type === 'main') {
+      local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
+    }
+    if(type === 'screen') {
+      screen_stream?.getTracks().forEach(track => conn.addTrack(track, screen_stream));
+    }
+    conn.ontrack = (event) => onTrack(event, peerId, type);
+    conn.onicecandidate = (event) => onIceCandidate(event, peerId, type);
+    conn.oniceconnectionstatechange = () => onIceConnectionStateChange(conn, peerId, type);
+    console.log("Created RTCPeerConnection for:", peerId, type);
+  };
+
+  const startConnection = async (peerId, type) => {
+    console.log('startConnection', peerId, type);
+    createPeerConnection(peerId, type);
+    const conn = pc.current[peerId]?.[type];
+    if (!conn) return;
+
+    const offer = await conn.createOffer();
+    await conn.setLocalDescription(offer);
+
+    socket.emit("offer", { 
+      to: peerId, 
+      sdp: offer,
+      type
+    });
+  };
+
+  const rebuildPeerConnection = async (peerId, type) => {
+    console.log('rebuildPeerConnection', peerId, type);
+    if (pc.current[peerId]?.[type]) {
+      pc.current[peerId][type].close();
+      delete pc.current[peerId];
+    }
+    await startConnection(peerId, type);
+  };
+
+  const initializePeersConnection = async (type) => {
+    await Promise.all(
+      users
+        .filter(item => item.socket_id !== socket_id)
+        .map(item => startConnection(item.socket_id, type))
+    );
+  }
 
   useEffect(() => {
 
-    const onTrack = (event, peerId) => {
-      console.log('new track added: ', peerId);
-      const remoteStream = event.streams[0];
-      pc.current[peerId].remoteStream = remoteStream;
-      updateRemoteStreams(peerId, remoteStream);
-    };
-
-    const onIceCandidate = (event, peerId) => {
-      if (event.candidate) {
-        socket.emit("ice-candidate", { 
-          to: peerId, 
-          candidate: event.candidate 
-        });
-      }
-    };
-
-    const onIceConnectionStateChange = (conn, peerId) => {
-      console.log("ICE state:", conn.iceConnectionState);
-      if (conn.iceConnectionState === "failed" ||
-          conn.iceConnectionState === "disconnected") {
-        console.warn("Connection failed with", peerId);
-        attemptReconnect(peerId);
-      }
-    };
-
-    const attemptReconnect = async (peerId, retries = 10, delay = 1000) => {
-      console.log(`Attempting reconnect to ${peerId}, retries left: ${retries}`);
-      const conn = pc.current[peerId];
-      const state = conn?.iceConnectionState;
-
-      if (!conn || ["closed", "disconnected", "failed"].includes(state)) {
-        return rebuildPeerConnection(peerId);
-      }
-
-      if (retries <= 0) {
-        console.log("Failed to reconnect", peerId);
-        return rebuildPeerConnection(peerId);
-      }
-
+    const handleOffer = async ({ from, sdp, type }) => {
       try {
-        const offer = await conn.createOffer({ iceRestart: true });
-        await conn.setLocalDescription(offer);
-        socket.emit("offer", { to: peerId, sdp: offer });
-        console.log("ICE restart triggered for", peerId);
-      } catch (err) {
-        console.error("ICE restart failed, rebuilding connection", err);
-        return rebuildPeerConnection(peerId); 
-      }
+        console.log('handleOffer', from, type);
+        const conn = pc.current[from]?.[type] || new RTCPeerConnection(iceConfig);
 
-      setTimeout(() => attemptReconnect(peerId, retries - 1, delay), delay);
-    };
+        console.log(conn, !pc.current[from]?.[type]);
 
-    const createPeerConnection = (peerId) => {
-      console.log('createPeerConnection', peerId);
-
-      if (pc.current[peerId]) return;
-      pc.current[peerId] = new RTCPeerConnection(iceConfig);
-      const conn = pc.current[peerId];
-      local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
-      conn.ontrack = (event) => onTrack(event, peerId);
-      conn.onicecandidate = (event) => onIceCandidate(event, peerId);
-      conn.oniceconnectionstatechange = () => onIceConnectionStateChange(conn, peerId);
-
-      console.log("Created RTCPeerConnection for:", peerId);
-    };
-
-    const startConnection = async (peerId) => {
-      console.log('startConnection', peerId);
-      createPeerConnection(peerId);
-      const conn = pc.current[peerId];
-      if (!conn) return;
-
-      const offer = await conn.createOffer();
-      await conn.setLocalDescription(offer);
-
-      socket.emit("offer", { 
-        to: peerId, 
-        sdp: offer 
-      });
-    };
-
-    const rebuildPeerConnection = async (peerId) => {
-      console.log('rebuildPeerConnection', peerId);
-      if (pc.current[peerId]) {
-        pc.current[peerId].close();
-        delete pc.current[peerId];
-      }
-      await startConnection(peerId);
-    };
-
-    const handleOffer = async ({ from, sdp }) => {
-      console.log('handleOffer', from);
-      const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
-      
-      if (!pc.current[from]) {
-        pc.current[from] = conn;
-        local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
-        conn.ontrack = (event) => onTrack(event, from);
-        conn.onicecandidate = (event) => onIceCandidate(event, from);
-        conn.oniceconnectionstatechange = () => onIceConnectionStateChange(conn, from);
-      }
-
-      await conn.setRemoteDescription(new RTCSessionDescription(sdp));
-      const answer = await conn.createAnswer();
-      await conn.setLocalDescription(answer);
-      socket.emit("answer", { to: from, sdp: answer });
-
-      if (pendingCandidates.current[from]) {
-        for (const candidate of pendingCandidates.current[from]) {
-          try {
-            await conn.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log("Added queued ICE candidate from:", from);
-          } catch (err) {
-            console.error("Error adding queued candidate", err);
+        if (!pc.current[from]?.[type]) {
+          pc.current[from] ??= {};
+          pc.current[from][type] = conn;
+          if(type === 'main') {
+            local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
           }
+          if(type === 'screen') {
+            screen_stream?.getTracks().forEach(track => conn.addTrack(track, screen_stream));
+          }
+          conn.ontrack = (event) => onTrack(event, from, type);
+          conn.onicecandidate = (event) => onIceCandidate(event, from, type);
+          conn.oniceconnectionstatechange = () => onIceConnectionStateChange(conn, from, type);
         }
-        delete pendingCandidates.current[from];
+
+        await conn.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await conn.createAnswer();
+        await conn.setLocalDescription(answer);
+        socket.emit("answer", { to: from, sdp: answer, type });
+
+        if (pendingCandidates.current[from]?.[type]?.length) {
+          for (const candidate of pendingCandidates.current[from][type]) {
+            try {
+              const iceCandidate = candidate instanceof RTCIceCandidate 
+                ? candidate 
+                : new RTCIceCandidate(candidate);
+
+              if (conn.remoteDescription && conn.remoteDescription.type) {
+                await conn.addIceCandidate(iceCandidate);
+                console.log("Added queued ICE candidate from:", from, type);
+              } else {
+                console.warn("Remote description not set yet, keeping candidate:", from, type);
+                break;
+              }
+            } catch (err) {
+              console.error("Error adding queued candidate", err, candidate);
+            }
+          }
+
+          delete pendingCandidates.current[from][type];
+        }
+      } catch (err) {
+        console.warn(err);
       }
     };
 
-    const handleAnswer = async ({ from, sdp }) => {
-      console.log('handleAnswer', from);
-      const conn = pc.current[from];
+    const handleAnswer = async ({ from, sdp, type }) => {
+      console.log('handleAnswer', from, type);
+      const conn = pc.current[from]?.[type];
       if (conn) {
         try {
           if (conn.signalingState === "have-local-offer") {
             await conn.setRemoteDescription(new RTCSessionDescription(sdp));
-            console.log("Remote answer set for:", from);
+            console.log("Remote answer set for:", from, type);
           } else {
-            console.warn("Skipping answer because state is", conn.signalingState);
+            console.warn("Skipping answer because state is", conn.signalingState, type);
           }
 
-          if (pendingCandidates.current[from]) {
-            for (const candidate of pendingCandidates.current[from]) {
+          if (pendingCandidates.current[from]?.[type]?.length) {
+            for (const candidate of pendingCandidates.current[from][type]) {
               try {
-                await conn.addIceCandidate(new RTCIceCandidate(candidate));
+                if (!conn.remoteDescription || !conn.remoteDescription.type) {
+                  console.warn("Remote description not set yet, skipping candidate:", candidate);
+                  continue;
+                }
+
+                const iceCandidate = candidate instanceof RTCIceCandidate
+                  ? candidate
+                  : new RTCIceCandidate(candidate);
+
+                await conn.addIceCandidate(iceCandidate);
+                console.log("Added queued ICE candidate from:", from, type);
               } catch (err) {
-                console.error("Error adding queued candidate from answer handler", err);
+                console.error("Error adding queued candidate from answer handler", err, type, candidate);
               }
             }
-            delete pendingCandidates.current[from];
+
+            delete pendingCandidates.current[from][type];
           }
         } catch (err) {
-          console.warn("Failed to set remote description for answer", from, err);
+          console.warn("Failed to set remote description for answer", from, err, type);
         }
       }
     };
 
-    const handleIceCandidate = async ({ from, candidate }) => {
-      console.log('handleIceCandidate', from);
-      const conn = pc.current[from];
+    const handleIceCandidate = async ({ from, candidate, type }) => {
+      console.log('handleIceCandidate', from, type);
+      const conn = pc.current[from]?.[type];
       if (!conn) {
-        console.warn("Peer connection not found for ICE candidate from:", from);
+        console.warn("Peer connection not found for ICE candidate from:", from, type);
         return;
       }
       
       if (conn.remoteDescription) {
         try {
           await conn.addIceCandidate(new RTCIceCandidate(candidate));
-          console.log("Added ICE candidate from:", from);
+          console.log("Added ICE candidate from:", from, type);
         } catch (err) {
           console.error("Error adding ICE candidate", err);
         }
       } else {
-        if (!pendingCandidates.current[from]) {
-          pendingCandidates.current[from] = [];
+        if (!conn.remoteDescription || !conn.remoteDescription.type) {
+          if (!pendingCandidates.current[from]) {
+            pendingCandidates.current[from] = {};
+          }
+          if (!pendingCandidates.current[from][type]) {
+            pendingCandidates.current[from][type] = [];
+          }
+          pendingCandidates.current[from][type].push(candidate);
+          console.log("Queued ICE candidate from:", from, type);
         }
-        pendingCandidates.current[from].push(candidate);
-        console.log("Queued ICE candidate from:", from);
       }
     };
 
@@ -245,11 +329,8 @@ function Call() {
     };
 
     if (local_stream && users.length > 1) {
-      setTimeout(() => {
-        users
-        .filter(item => item.socket_id !== socket_id)
-        .forEach(item => startConnection(item.socket_id));
-      }, 3000);
+      console.log('setTimeout(() => initializePeersConnection("main"), 3000);');
+      setTimeout(() => initializePeersConnection('main'), 3000);
     }
 
     socket.on("offer", handleOffer);
@@ -270,7 +351,9 @@ function Call() {
       const user = users.find(item => item.socket_id === peerId);
       if (!user) {
         console.log('Peer removed: ', peerId);
-        pc.current[peerId].close();
+        for (const type of ['main', 'screen']) {
+          pc.current[peerId]?.[type]?.close();
+        }
         delete pc.current[peerId];
       }
     });
@@ -306,10 +389,11 @@ function Call() {
 
   const renderSingleVideo = () => {
     const localVideo = getVideos().find(item => item.myself);
-    const singleVideo = getVideos().find(item => item.id === selected);
+    const singleVideo = getVideos().find(item => item.id === selected?.[0]);
 
     return (
       <SingleVideo 
+        type={selected?.[1]}
         selected={(selected && singleVideo) ? singleVideo : localVideo} 
       />
     );
@@ -320,6 +404,20 @@ function Call() {
     setSelected(item);
   };
 
+  useEffect(() => {
+    const startScreenShare = async () => {
+      try {
+        await initializePeersConnection('screen');
+      } catch (err) {
+        console.error("Screen share failed:", err);
+      }
+    };
+
+    if(screen_stream) {
+      startScreenShare();
+    }
+  }, [screen_stream]);
+
   return (
     <div className="d-flex flex-column w-100 vh-100">
       <div className="flex-grow-1 w-100 overflow-auto video-call-container">
@@ -329,6 +427,15 @@ function Call() {
               {getVideos().map(item => (
                 <Video
                   key={item.id}
+                  type="screen"
+                  onVideoSelect={onVideoSelect}
+                  {...item}
+                />
+              ))}
+              {getVideos().map(item => (
+                <Video
+                  key={item.id}
+                  type="video"
                   onVideoSelect={onVideoSelect}
                   {...item}
                 />
@@ -344,6 +451,15 @@ function Call() {
               {getVideos().map(item => (
                 <Video
                   key={item.id}
+                  type="screen"
+                  onVideoSelect={onVideoSelect}
+                  {...item}
+                />
+              ))}
+              {getVideos().map(item => (
+                <Video
+                  key={item.id}
+                  type="video"
                   onVideoSelect={onVideoSelect}
                   {...item}
                 />
@@ -356,7 +472,7 @@ function Call() {
         <div
           className="d-flex justify-content-center align-items-center w-100 h-100 bottom-0"
         >
-          <VideoControls />
+          <VideoControls  />
         </div>
       </div>
     </div>
