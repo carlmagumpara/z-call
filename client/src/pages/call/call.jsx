@@ -394,7 +394,7 @@ function Call() {
     return (
       <SingleVideo 
         type={selected?.[1]}
-        selected={(selected && singleVideo) ? singleVideo : localVideo} 
+        selected={singleVideo ?? localVideo}
       />
     );
   };

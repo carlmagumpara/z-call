@@ -4,7 +4,7 @@ function Video({ id, myself, user, media, onVideoSelect, type = 'video' }) {
   return (
     <div
       className="peer-tile"
-      onClick={() => onVideoSelect(myself ? null : [id, type === 'video' ? 'main' : type])}
+      onClick={() => onVideoSelect([myself ? null : id, type === 'video' ? 'main' : type])}
       style={{
         display: (type === 'screen' && !media.screen_sharing) ? 'none' : 'block'
       }}
