@@ -23,9 +23,6 @@ function VideoControls() {
     video_input_device_id,
     audio_input_device_id,
     audio_output_device_id,
-    setVideoInputDeviceId,
-    setAudioInputDeviceId,
-    setAudioOutputDeviceId,
     video_enabled,
     audio_enabled,
     screen_sharing,
@@ -34,7 +31,9 @@ function VideoControls() {
     setupScreenShare,
     stopScreenShare,
     setLayout,
-    initializeLocalStream,
+    switchVideoInput,
+    switchAudioInput,
+    switchAudioOutput,
     endCall
   } = useVideoCall();
   const [open, setOpen] = useState(false);
@@ -117,7 +116,7 @@ function VideoControls() {
                 label: item.label,
                 value: item.deviceId,
               }))}
-              onChange={value => setVideoInputDeviceId(value)}
+              onChange={value => switchVideoInput(value)}
             />
           </Form.Item>
           <Form.Item label="Audio Input">
@@ -128,7 +127,7 @@ function VideoControls() {
                 label: item.label,
                 value: item.deviceId,
               }))}
-              onChange={value => setAudioInputDeviceId(value)}
+              onChange={value => switchAudioInput(value)}
             />
           </Form.Item>
           <Form.Item label="Audio Output">
@@ -139,7 +138,7 @@ function VideoControls() {
                 label: item.label,
                 value: item.deviceId,
               }))}
-              onChange={value => setAudioOutputDeviceId(value)}
+              onChange={value => switchAudioOutput(value)}
             />
           </Form.Item>
         </Form>

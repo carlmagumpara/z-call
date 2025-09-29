@@ -109,9 +109,8 @@
 
     .side-videos {
       border-radius: 12px;
-      flex: 1;
-      display: grid;
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
       gap: 12px;
       overflow-y: auto;
       overflow-x: hidden;
