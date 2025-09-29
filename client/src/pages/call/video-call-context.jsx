@@ -247,7 +247,7 @@ function VideoCallProvider({ children }) {
       setVideoInputs(video_inputs);
       setAudioInputs(audio_inputs);
       setAudioOutputs(audio_outputs);
-      setAudioOutputDeviceId(default_audio_output.deviceId);
+      setAudioOutputDeviceId(default_audio_output?.deviceId ?? null);
     };
 
     navigator.mediaDevices.ondevicechange = () => initMediaDevices();

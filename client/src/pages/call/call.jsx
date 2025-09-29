@@ -80,10 +80,10 @@ function Call() {
       }
     };
 
-    const onIceConnectionStateChange = (newPc, peerId) => {
-      console.log("ICE state:", newPc.iceConnectionState);
-      if (newPc.iceConnectionState === "failed" ||
-          newPc.iceConnectionState === "disconnected") {
+    const onIceConnectionStateChange = (conn, peerId) => {
+      console.log("ICE state:", conn.iceConnectionState);
+      if (conn.iceConnectionState === "failed" ||
+          conn.iceConnectionState === "disconnected") {
         console.warn("Connection failed with", peerId);
         attemptReconnect(peerId);
       }
@@ -120,12 +120,12 @@ function Call() {
       console.log('createPeerConnection', peerId);
 
       if (pc.current[peerId]) return;
-      const newPc = new RTCPeerConnection(iceConfig);
-      pc.current[peerId] = newPc;
-      local_stream?.getTracks().forEach(track => newPc.addTrack(track, local_stream));
-      newPc.ontrack = (event) => onTrack(event, peerId);
-      newPc.onicecandidate = (event) => onIceCandidate(event, peerId);
-      newPc.oniceconnectionstatechange = () => onIceConnectionStateChange(newPc, peerId);
+      pc.current[peerId] = new RTCPeerConnection(iceConfig);
+      const conn = pc.current[peerId];
+      local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
+      conn.ontrack = (event) => onTrack(event, peerId);
+      conn.onicecandidate = (event) => onIceCandidate(event, peerId);
+      conn.oniceconnectionstatechange = () => onIceConnectionStateChange(conn, peerId);
 
       console.log("Created RTCPeerConnection for:", peerId);
     };
