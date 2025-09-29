@@ -8,7 +8,7 @@ function SingleVideo({ selected, type = 'main' }) {
 
   useEffect(() => {
     const selectedVideoEl = document.getElementById("selected");
-    const stream = pc.current[id]?.[type]?.remoteStream || (type === 'main' ? local_stream : screen_stream);
+    const stream = pc.current[id]?.[type]?.remoteStream || (type === 'main' ? local_stream : (screen_stream ?? local_stream));
     if(selectedVideoEl && stream) {
       const videoTrack = stream.getVideoTracks()[0];
       selectedVideoEl.srcObject = new MediaStream([videoTrack]);
