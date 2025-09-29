@@ -157,6 +157,7 @@ function Call() {
     const handleOffer = async ({ from, sdp }) => {
       console.log('handleOffer', from);
       const conn = pc.current[from] || new RTCPeerConnection(iceConfig);
+      
       if (!pc.current[from]) {
         pc.current[from] = conn;
         local_stream?.getTracks().forEach(track => conn.addTrack(track, local_stream));
