@@ -109,18 +109,19 @@ function Call() {
     if (conn.iceConnectionState === "failed" ||
         conn.iceConnectionState === "disconnected") {
       console.warn("Connection failed with", peerId);
-      if(type === 'main') {
-        attemptReconnect(peerId, type);
-      }
+      // if(type === 'main') {
+      //   attemptReconnect(peerId, type);
+      // }
       if(type === 'screen') {
         if (pc.current[peerId]) {
           const remoteVideoEl = document.getElementById(`remote-screen-${peerId}`);
           if (remoteVideoEl) {
             remoteVideoEl.srcObject = null;
           };
-          delete pc.current[peerId][type];
+          // delete pc.current[peerId][type];
         }
       }
+      attemptReconnect(peerId, type);
     }
   };
 
