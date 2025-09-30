@@ -92,7 +92,7 @@
 
     .main-video {
       flex: 3;
-      background: #111827;
+      background-color: #333333;
       border-radius: 12px;
       overflow: hidden;
       display: flex;
@@ -103,7 +103,7 @@
       .selected-wrapper {
         width: 100%;
         height: 100%;
-          
+
         video {
           width: 100%;
           height: 100%;
@@ -186,7 +186,7 @@
   align-items: center;
   gap: 1em;
   p {
-    margin-bottom: 0px;
+    margin-bottom: 0;
     color: #ffffff;
   }
 }
@@ -195,6 +195,32 @@
 }
 
 .peer-name.video-off {
+  width: 100%;
+  height: 100%;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  font-size: 30px;
+  justify-content: center;
+  background: transparent;
+}
+
+.peer-icons {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1em;
+  p {
+    margin-bottom: 0;
+    color: #ffffff;
+  }
 }
 
 .active {

@@ -31,25 +31,25 @@ function SingleVideo({ selected, type = 'main' }) {
           display: (type === 'main' && !media.video) ? 'none' : 'block'
         }}
       />
+      {type === 'main' ? (
+        <div className="peer-icons">
+          <p className="left-mic">
+            {media.audio ? <MdMic /> : <MdMicOff />}
+          </p>
+          <p className="left-video">
+            {media.video ? <MdVideocam /> : <MdVideocamOff />}
+          </p>
+          {media.screen_sharing ? (
+          <p className="left-screenshare">
+            <MdOutlineScreenShare />
+          </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
         <p className="left-name">
           {`${user.username}${type === 'screen' ? ' (Screen)' : ''}`}
         </p>
-        {type === 'main' ? (
-          <>
-            <p className="left-mic">
-              {media.audio ? <MdMic /> : <MdMicOff />}
-            </p>
-            <p className="left-video">
-              {media.video ? <MdVideocam /> : <MdVideocamOff />}
-            </p>
-            {media.screen_sharing ? (
-            <p className="left-screenshare">
-              <MdOutlineScreenShare />
-            </p>
-            ) : null}
-          </>
-        ) : null}
       </div>
     </div>
   );

@@ -26,25 +26,25 @@ function Video({ id, myself, user, media, onVideoSelect, type = 'video' }) {
           autoPlay={true}
         />
       ) : null}
+      {type === 'video' ? (
+        <div className="peer-icons">
+          <p className="left-mic">
+            {media.audio ? <MdMic /> : <MdMicOff />}
+          </p>
+          <p className="left-video">
+            {media.video ? <MdVideocam /> : <MdVideocamOff />}
+          </p>
+          {media.screen_sharing ? (
+          <p className="left-screenshare">
+            <MdOutlineScreenShare />
+          </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
         <p className="left-name">
           {`${user.username}${type === 'screen' ? ' (Screen)' : ''}`}
         </p>
-        {type === 'video' ? (
-          <>
-            <p className="left-mic">
-              {media.audio ? <MdMic /> : <MdMicOff />}
-            </p>
-            <p className="left-video">
-              {media.video ? <MdVideocam /> : <MdVideocamOff />}
-            </p>
-            {media.screen_sharing ? (
-            <p className="left-screenshare">
-              <MdOutlineScreenShare />
-            </p>
-            ) : null}
-          </>
-        ) : null}
       </div>
     </div>
   );
