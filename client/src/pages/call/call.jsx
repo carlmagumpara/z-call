@@ -35,8 +35,6 @@ function Call() {
   const pendingCandidates = useRef({});
   const [selected, setSelected] = useState(null);
 
-  // const ss = useRef(null);
-
   useEffect(() => {
     initializeLocalStream();
   }, []);
@@ -115,6 +113,9 @@ function Call() {
           if (remoteVideoEl) {
             remoteVideoEl.srcObject = null;
           };
+          if(selected?.[0] === peerId) {
+            setSelected(null);
+          }
         }
       }
       attemptReconnect(peerId, type);
@@ -333,6 +334,10 @@ function Call() {
       setTimeout(() => initializePeersConnection('main'), 3000);
     }
 
+    if(screen_stream && users.length > 1) {
+      setTimeout(() => initializePeersConnection('screen'), 3000);
+    }
+
     socket.on("offer", handleOffer);
     socket.on("answer", handleAnswer);
     socket.on("ice-candidate", handleIceCandidate);
@@ -344,7 +349,7 @@ function Call() {
       socket.off("ice-candidate", handleIceCandidate);
       socket.off("media-status", handleMediaStatus);
     };
-  }, [users, local_stream]);
+  }, [users, local_stream, screen_stream]);
 
   useEffect(() => {
     Object.keys(pc.current || {}).forEach(peerId => {
@@ -404,11 +409,11 @@ function Call() {
     setSelected(item);
   };
 
-  useEffect(() => {
-    if(screen_stream) {
-      setTimeout(() => initializePeersConnection('screen'), 3000);
-    }
-  }, [users, screen_stream]);
+  // useEffect(() => {
+  //   if(screen_stream) {
+  //     setTimeout(() => initializePeersConnection('screen'), 3000);
+  //   }
+  // }, [users, screen_stream]);
 
   return (
     <div className="d-flex flex-column w-100 vh-100">
