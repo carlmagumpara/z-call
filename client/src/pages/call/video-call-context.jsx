@@ -121,6 +121,10 @@ function VideoCallProvider({ children }) {
       } catch (err) {
         console.warn(`Error closing connection for ${peerId} (${type})`, err);
       }
+
+      if (pc.current[peerId]) {
+        delete pc.current[peerId][type];
+      }
     });
   };
 
