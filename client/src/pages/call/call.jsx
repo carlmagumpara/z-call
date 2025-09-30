@@ -1,5 +1,5 @@
 import adapter from 'webrtc-adapter';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { Container, Button, ButtonGroup } from 'react-bootstrap';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
@@ -409,12 +409,6 @@ function Call() {
     setSelected(item);
   };
 
-  // useEffect(() => {
-  //   if(screen_stream) {
-  //     setTimeout(() => initializePeersConnection('screen'), 3000);
-  //   }
-  // }, [users, screen_stream]);
-
   return (
     <div className="d-flex flex-column w-100 vh-100">
       <div className="flex-grow-1 w-100 overflow-auto video-call-container">
@@ -422,20 +416,18 @@ function Call() {
           <div className="video-call-container-grid">
             <div className="video-masonry">
               {getVideos().map(item => (
-                <Video
-                  key={item.id}
-                  type="screen"
-                  onVideoSelect={onVideoSelect}
-                  {...item}
-                />
-              ))}
-              {getVideos().map(item => (
-                <Video
-                  key={item.id}
-                  type="video"
-                  onVideoSelect={onVideoSelect}
-                  {...item}
-                />
+                <Fragment key={item.id}>
+                  <Video
+                    type="video"
+                    onVideoSelect={onVideoSelect}
+                    {...item}
+                  />
+                  <Video
+                    type="screen"
+                    onVideoSelect={onVideoSelect}
+                    {...item}
+                  />
+                </Fragment>
               ))}
             </div>
           </div>
@@ -446,20 +438,18 @@ function Call() {
             </div>
             <div className="side-videos">
               {getVideos().map(item => (
-                <Video
-                  key={item.id}
-                  type="screen"
-                  onVideoSelect={onVideoSelect}
-                  {...item}
-                />
-              ))}
-              {getVideos().map(item => (
-                <Video
-                  key={item.id}
-                  type="video"
-                  onVideoSelect={onVideoSelect}
-                  {...item}
-                />
+                <Fragment key={item.id}>
+                  <Video
+                    type="video"
+                    onVideoSelect={onVideoSelect}
+                    {...item}
+                  />
+                  <Video
+                    type="screen"
+                    onVideoSelect={onVideoSelect}
+                    {...item}
+                  />
+                </Fragment>
               ))}
             </div>
           </div>
