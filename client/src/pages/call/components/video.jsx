@@ -1,6 +1,7 @@
 import { MdVideocam, MdVideocamOff, MdMic, MdMicOff, MdOutlineScreenShare } from 'react-icons/md';
 
 function Video({ id, myself, user, media, onVideoSelect, type = 'video' }) {
+
   return (
     <div
       className="peer-tile"
@@ -15,8 +16,11 @@ function Video({ id, myself, user, media, onVideoSelect, type = 'video' }) {
         autoPlay={true}
         playsInline={true}
         className="peer-video"
+        style={{
+          display: (type === 'video' && !media.video) ? 'none' : 'block'
+        }}
       />
-      {!myself ? (
+      {(!myself && type === 'video') ? (
         <audio 
           id={`remote-audio-${id}`}
           autoPlay={true}
@@ -24,18 +28,22 @@ function Video({ id, myself, user, media, onVideoSelect, type = 'video' }) {
       ) : null}
       <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
         <p className="left-name">
-          {myself ? `${user.username} (You)` : user.username}
+          {`${user.username}${type === 'screen' ? ' (Screen)' : ''}`}
         </p>
-        <p className="left-mic">
-          {media.audio ? <MdMic /> : <MdMicOff />}
-        </p>
-        <p className="left-video">
-          {media.video ? <MdVideocam /> : <MdVideocamOff />}
-        </p>
-        {media.screen_sharing ? (
-        <p className="left-screenshare">
-          <MdOutlineScreenShare />
-        </p>
+        {type === 'video' ? (
+          <>
+            <p className="left-mic">
+              {media.audio ? <MdMic /> : <MdMicOff />}
+            </p>
+            <p className="left-video">
+              {media.video ? <MdVideocam /> : <MdVideocamOff />}
+            </p>
+            {media.screen_sharing ? (
+            <p className="left-screenshare">
+              <MdOutlineScreenShare />
+            </p>
+            ) : null}
+          </>
         ) : null}
       </div>
     </div>

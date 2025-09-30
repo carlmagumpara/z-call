@@ -374,7 +374,7 @@ function Call() {
         audio: audio_enabled || false,
       }
     });
-  }, [video_enabled, audio_enabled, screen_sharing]);
+  }, [users, video_enabled, audio_enabled, screen_sharing]);
 
   const getVideos = () => {
     const defaultMedia = {
