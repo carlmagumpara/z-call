@@ -408,8 +408,8 @@ function Call() {
   };
 
   useEffect(() => {
-    if(screen_stream && users.length > 1) {
-      setTimeout(() => initializePeersConnection('screen'), 3000);
+    if(screen_stream) {
+      setTimeout(() => initializePeersConnection('screen'), 6000);
     }
   }, [users, screen_stream]);
 
