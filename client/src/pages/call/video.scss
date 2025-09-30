@@ -100,10 +100,15 @@
       align-items: center;
       position: relative;
 
-      video {
+      .selected-wrapper {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+          
+        video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
       }
     }
 

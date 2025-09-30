@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { MdVideocam, MdVideocamOff, MdMic, MdMicOff } from 'react-icons/md';
+import { MdVideocam, MdVideocamOff, MdMic, MdMicOff, MdOutlineScreenShare } from 'react-icons/md';
 import { useVideoCall } from '../video-call-context';
 
 function SingleVideo({ selected, type = 'main' }) {
@@ -16,25 +16,42 @@ function SingleVideo({ selected, type = 'main' }) {
   }, [selected, local_stream, screen_stream]);
 
   return (
-    <>
+    <div 
+      className="selected-wrapper"
+      style={{
+        display: (type === 'screen' && !media.screen_sharing) ? 'none' : 'block'
+      }}
+    >
       <video 
         id="selected"
         autoPlay={true}
         playsInline={true}
         muted={true}
+        style={{
+          display: (type === 'main' && !media.video) ? 'none' : 'block'
+        }}
       />
       <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
         <p className="left-name">
-          {myself ? `${user.username} (You)` : user.username}
+          {`${user.username}${type === 'screen' ? ' (Screen)' : ''}`}
         </p>
-        <p className="left-mic">
-          {media.audio ? <MdMic /> : <MdMicOff />}
-        </p>
-        <p className="left-video">
-          {media.video ? <MdVideocam /> : <MdVideocamOff />}
-        </p>
+        {type === 'main' ? (
+          <>
+            <p className="left-mic">
+              {media.audio ? <MdMic /> : <MdMicOff />}
+            </p>
+            <p className="left-video">
+              {media.video ? <MdVideocam /> : <MdVideocamOff />}
+            </p>
+            {media.screen_sharing ? (
+            <p className="left-screenshare">
+              <MdOutlineScreenShare />
+            </p>
+            ) : null}
+          </>
+        ) : null}
       </div>
-    </>
+    </div>
   );
 }
 
