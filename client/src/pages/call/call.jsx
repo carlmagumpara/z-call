@@ -383,13 +383,58 @@ function Call() {
       video: false 
     };
 
-    return users
-    .map(item => ({
-      id: item.socket_id,
-      myself: item.socket_id === socket_id,
-      user: item,
-      media: media_status[item.socket_id] || defaultMedia,
-    }));
+    // return users
+    // .map(item => ({
+    //   id: item.socket_id,
+    //   myself: item.socket_id === socket_id,
+    //   user: item,
+    //   media: media_status[item.socket_id] || defaultMedia,
+    // }));
+
+    return [
+      ...users
+        .map(item => ({
+          id: item.socket_id,
+          myself: item.socket_id === socket_id,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        })),
+      ...users
+        .map(item => ({
+          id: item.socket_id,
+          myself: item.socket_id === socket_id,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        })),
+      ...users
+        .map(item => ({
+          id: item.socket_id,
+          myself: item.socket_id === socket_id,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        })),
+      ...users
+        .map(item => ({
+          id: item.socket_id,
+          myself: item.socket_id === socket_id,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        })),
+      ...users
+        .map(item => ({
+          id: item.socket_id,
+          myself: item.socket_id === socket_id,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        })),
+      ...users
+        .map(item => ({
+          id: item.socket_id,
+          myself: item.socket_id === socket_id,
+          user: item,
+          media: media_status[item.socket_id] || defaultMedia,
+        })),
+    ]
   };
 
   const renderSingleVideo = () => {
@@ -410,8 +455,10 @@ function Call() {
   };
 
   return (
-    <div className="d-flex flex-column w-100 vh-100">
-      <div className="flex-grow-1 w-100 overflow-auto video-call-container">
+    <div 
+      className=""
+    >
+      <div className="video-call-container">
         {layout === 'grid' ? (
           <div className="video-call-container-grid">
             <div className="video-masonry">
@@ -455,9 +502,9 @@ function Call() {
           </div>
         )}
       </div>
-      <div className="flex-shrink-1 video-call-controls-container">
+      <div className="video-call-controls-container">
         <div
-          className="d-flex justify-content-center align-items-center w-100 h-100 bottom-0"
+          className=""
         >
           <VideoControls  />
         </div>

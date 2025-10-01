@@ -27,9 +27,9 @@ function Landing() {
           <div className="w-100 d-flex justify-content-center align-items-center h-100">
             <div className="text-center">
 
-              <h1 className="display-1 animate__animated animate__flipInX fw-bolder text-white">zCall</h1>
-              <h3 className="mb-5 animate__animated animate__flipInX animate__delay-1s text-white">
-                lorem ipsum dolor sit amet, consectetur adipiscing elit.
+              <h1 className="display-1 animate__animated animate__flipInX fw-bolder">zCall</h1>
+              <h3 className="mb-5 animate__animated animate__flipInX animate__delay-1s">
+                Free video. Secure screens. Instant chat.
               </h3>
               <div className="mb-2">
                 <Button
@@ -43,7 +43,7 @@ function Landing() {
           </div>
         </div>
         <footer className="text-center">
-          <p className="footer-heart text-white">
+          <p className="footer-heart">
             Made with <IoHeart color="#ff0000" /> by <a target="_blank" rel="noopener" href="https://github.com/carlmagumpara">carlmagumpara</a>
           </p>
         </footer>

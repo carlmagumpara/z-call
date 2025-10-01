@@ -1,9 +1,10 @@
-import { Container, Nav, Navbar, NavDropdown, Image } from 'react-bootstrap';
+import { Container, Nav, Navbar, NavDropdown, NavItem, Image } from 'react-bootstrap';
 import { Link } from 'react-router';
 import Avatar from 'boring-avatars';
 import Logo from '@/assets/logo.png'
 import { usePresence } from '@/contexts/presence';
 import { useGlobalModal, MODAL_TYPES } from '@/contexts/global-modal';
+import ThemeToggle from './theme-toggle';
 
 function Navigation() {
   const { handleShow } = useGlobalModal();
@@ -20,7 +21,7 @@ function Navigation() {
         <Navbar.Brand 
           as={Link} 
           to={`/`} 
-          className="cursor-pointer d-flex justify-content-center align-items-center gap-2 text-white"
+          className="cursor-pointer d-flex justify-content-center align-items-center gap-2"
         >
           <Image 
             className="" 
@@ -35,6 +36,7 @@ function Navigation() {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ms-auto">
+            <ThemeToggle />
             <NavDropdown 
               title={
                 <>
@@ -43,7 +45,7 @@ function Navigation() {
                     size={30}
                     variant="beam"
                   />
-                  <span className="ms-2 text-white">{username}</span>
+                  <span className="ms-2">{username}</span>
                 </>
               }
               align="end"
