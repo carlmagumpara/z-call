@@ -383,58 +383,13 @@ function Call() {
       video: false 
     };
 
-    // return users
-    // .map(item => ({
-    //   id: item.socket_id,
-    //   myself: item.socket_id === socket_id,
-    //   user: item,
-    //   media: media_status[item.socket_id] || defaultMedia,
-    // }));
-
-    return [
-      ...users
-        .map(item => ({
-          id: item.socket_id,
-          myself: item.socket_id === socket_id,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        })),
-      ...users
-        .map(item => ({
-          id: item.socket_id,
-          myself: item.socket_id === socket_id,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        })),
-      ...users
-        .map(item => ({
-          id: item.socket_id,
-          myself: item.socket_id === socket_id,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        })),
-      ...users
-        .map(item => ({
-          id: item.socket_id,
-          myself: item.socket_id === socket_id,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        })),
-      ...users
-        .map(item => ({
-          id: item.socket_id,
-          myself: item.socket_id === socket_id,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        })),
-      ...users
-        .map(item => ({
-          id: item.socket_id,
-          myself: item.socket_id === socket_id,
-          user: item,
-          media: media_status[item.socket_id] || defaultMedia,
-        })),
-    ]
+    return users
+    .map(item => ({
+      id: item.socket_id,
+      myself: item.socket_id === socket_id,
+      user: item,
+      media: media_status[item.socket_id] || defaultMedia,
+    }));
   };
 
   const renderSingleVideo = () => {

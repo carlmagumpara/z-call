@@ -33,11 +33,11 @@ function Navigation() {
           />
           <span>zCall</span>
         </Navbar.Brand>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
+        {/*<Navbar.Toggle aria-controls="basic-navbar-nav" />*/}
+        {/*<Navbar.Collapse id="basic-navbar-nav">*/}
           <Nav className="ms-auto">
             <ThemeToggle />
-            <NavDropdown 
+{/*            <NavDropdown 
               title={
                 <>
                   <Avatar 
@@ -55,9 +55,9 @@ function Navigation() {
               >
                 Settings
               </NavDropdown.Item>
-            </NavDropdown>
+            </NavDropdown>*/}
           </Nav>
-        </Navbar.Collapse>
+        {/*</Navbar.Collapse>*/}
       </Container>
     </Navbar>
   );
