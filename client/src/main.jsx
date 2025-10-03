@@ -1,7 +1,6 @@
 import '@ant-design/v5-patch-for-react-19';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'animate.css';
-import './index.scss'
+import './z-styles.scss';
+import './index.scss';
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'

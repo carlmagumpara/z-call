@@ -1,13 +1,14 @@
 import adapter from 'webrtc-adapter';
 import { useState, useEffect, useRef, Fragment } from 'react';
-import { Container, Button, ButtonGroup } from 'react-bootstrap';
+import { MdVideocam, MdVideocamOff, MdMic, MdMicOff, MdOutlineScreenShare } from 'react-icons/md';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
 import Video from './components/video';
-import SingleVideo from './components/single-video';
 import VideoControls from './components/video-controls';
+import Chat from './components/chat';
 import { useRoom } from './room-context';
 import { useVideoCall } from './video-call-context';
+import { useChat } from './chat-context';
 
 function Call() {
   const initilize = useRef(false);
@@ -31,9 +32,11 @@ function Call() {
     setLayout,
     media_status, 
     setMediaStatus,
+    selected, 
+    setSelected
   } = useVideoCall();
+  const { chat } = useChat();
   const pendingCandidates = useRef({});
-  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     initializeLocalStream();
@@ -392,80 +395,56 @@ function Call() {
     }));
   };
 
-  const renderSingleVideo = () => {
-    const localVideo = getVideos().find(item => item.myself);
-    const singleVideo = getVideos().find(item => item.id === selected?.[0]);
-
-    return (
-      <SingleVideo 
-        type={selected?.[1]}
-        selected={singleVideo ?? localVideo}
-      />
-    );
-  };
-
-  const onVideoSelect = item => {
-    setLayout('single-grid');
-    setSelected(item);
-  };
+  const main = getVideos().find(item => item.id === selected);
 
   return (
-    <div 
-      className=""
-    >
-      <div className="video-call-container">
-        {layout === 'grid' ? (
-          <div className="video-call-container-grid">
-            <div className="video-masonry">
-              {getVideos().map(item => (
-                <Fragment key={item.id}>
-                  <Video
-                    type="video"
-                    onVideoSelect={onVideoSelect}
-                    {...item}
-                  />
-                  <Video
-                    type="screen"
-                    onVideoSelect={onVideoSelect}
-                    {...item}
-                  />
-                </Fragment>
-              ))}
-            </div>
+    <div className="vc-container">
+      <div className="vc-video">
+        <div className="vc-main-video">
+          <div className="vc-video-icons">
+            <p>
+              {main?.media?.audio ? <MdMic /> : <MdMicOff />}
+            </p>
+            <p>
+              {main?.media?.video ? <MdVideocam /> : <MdVideocamOff />}
+            </p>
+            {main?.media?.screen_sharing ? (
+            <p>
+              <MdOutlineScreenShare />
+            </p>
+            ) : null}
           </div>
-        ) : (
-          <div className="video-call-container-single-grid">
-            <div className="main-video">
-              {renderSingleVideo()}
-            </div>
-            <div className="side-videos">
-              {getVideos().map(item => (
-                <Fragment key={item.id}>
-                  <Video
-                    type="video"
-                    onVideoSelect={onVideoSelect}
-                    {...item}
-                  />
-                  <Video
-                    type="screen"
-                    onVideoSelect={onVideoSelect}
-                    {...item}
-                  />
-                </Fragment>
-              ))}
-            </div>
+          <video
+            id="selected"
+            autoPlay={true}
+            playsInline={true}
+            muted={true}
+          ></video>
+          <div className="vc-video-name">
+            <p>{main?.user?.username}</p>
           </div>
-        )}
-      </div>
-      <div className="video-call-controls-container">
-        <div
-          className=""
-        >
-          <VideoControls  />
         </div>
+        <div className="vc-videos">
+          {getVideos().map(item => (
+            <Fragment key={item.id}>
+              <Video
+                type="video"
+                {...item}
+              />
+              <Video
+                type="screen"
+                {...item}
+              />
+            </Fragment>
+          ))}
+        </div>
+        <VideoControls  />
+      </div>
+      <div className="vc-chat">
+        <Chat />
       </div>
     </div>
-  );
+  )
 }
 
 export default Call;

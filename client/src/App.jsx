@@ -1,3 +1,4 @@
+import './App.scss';
 import { lazy } from 'react';
 import { Routes, Route } from 'react-router';
 import Wrapper from '@/shared/wrapper';
@@ -10,8 +11,8 @@ function App() {
     <Routes>        
       <Route element={<Wrapper />}>
         <Route path="/" element={<Landing />} />
-        <Route path="/r/:room_id" element={<Call />} />
       </Route>
+      <Route path="/r/:room_id" element={<Call />} />
     </Routes>
   )
 }

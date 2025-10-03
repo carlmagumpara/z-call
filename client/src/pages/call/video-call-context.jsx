@@ -22,6 +22,7 @@ function VideoCallProvider({ children }) {
   const [video_input_device_id, setVideoInputDeviceId] = useState(null);
   const [audio_input_device_id, setAudioInputDeviceId] = useState(null);
   const [audio_output_device_id, setAudioOutputDeviceId] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   const defaultMediaConfig = { 
     video: {
@@ -296,6 +297,8 @@ function VideoCallProvider({ children }) {
         setAudioOutputDeviceId,
         setScreenStream,
         setScreenSharing,
+        selected, 
+        setSelected,
         initializeLocalStream,
         setupScreenShare,
         stopScreenShare,

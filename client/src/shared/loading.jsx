@@ -1,17 +1,16 @@
 import React from 'react';
-import { Image } from 'react-bootstrap';
 import { BarLoader } from 'react-spinners';
 import Cat from '@/assets/cat.gif';
 
 function LoaderFull() {
   return (
     <div
-      className="full-loader w-100 d-flex justify-content-center align-items-center"
+      className="vh-100 full-loader w-100 d-flex justify-content-center align-items-center"
     >
       <div
         className="d-flex flex-column align-items-center"
       >
-        <Image
+        <img
           src={Cat}
           style={{
             width: 50,

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Button, ButtonGroup } from 'react-bootstrap';
 import {
   MdVideocam,
   MdVideocamOff,
@@ -12,8 +11,8 @@ import {
   MdMoreVert
 } from 'react-icons/md';
 import { Form, Popconfirm, Modal, Select } from 'antd';
-import { PiVideoConference } from 'react-icons/pi';
 import { useVideoCall } from '../video-call-context';
+import { useChat } from '../chat-context';
 
 function VideoControls() {
   const {
@@ -36,76 +35,57 @@ function VideoControls() {
     switchAudioOutput,
     endCall
   } = useVideoCall();
+  const { chat, setChat } = useChat();
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <ButtonGroup size="lg">
-        <Button
-          variant={audio_enabled ? 'primary' : 'secondary'}
+      <div className="vc-controls">
+        <button
+          className={`btn ${audio_enabled ? 'active' : ''}`}
           onClick={() => setTrackEnabled("audio", !audio_enabled)}
         >
           {audio_enabled ? <MdMic /> : <MdMicOff />}
-        </Button>
-        <Button
-          variant={video_enabled ? 'primary' : 'secondary'}
+        </button>
+        <button
+          className={`btn ${video_enabled ? 'active' : ''}`}
           onClick={() => setTrackEnabled("video", !video_enabled)}
         >
           {video_enabled ? <MdVideocam /> : <MdVideocamOff />}
-        </Button>
-        <Popconfirm
-          title="Screen Share"
-          description={
-            screen_sharing
-              ? `Are you sure you want to stop sharing your screen?`
-              : `Are you sure you want to share your screen?`
-          }
-          onConfirm={() => (screen_sharing ? stopScreenShare() : setupScreenShare())}
-          onCancel={() => {}}
-          okText="Yes"
-          cancelText="No"
+        </button>
+        <button
+          className={`btn ${screen_sharing ? 'active' : ''}`}
+          onClick={() => (screen_sharing ? stopScreenShare() : setupScreenShare())}
         >
-          <Button variant={screen_sharing ? 'primary' : 'secondary'}>
-            {screen_sharing ? <MdOutlineScreenShare /> : <MdOutlineStopScreenShare />}
-          </Button>
-        </Popconfirm>
-        <Button variant="secondary" onClick={() => {}}>
+          {screen_sharing ? <MdOutlineScreenShare /> : <MdOutlineStopScreenShare />}
+        </button>
+        <button
+          className={`btn ${chat ? 'active' : ''}`}
+          onClick={() => setChat(prevState => !prevState)}
+        >
           <MdChatBubble />
-        </Button>
-        <Button
-          variant={layout === 'single-grid' ? 'primary' : 'secondary'}
-          onClick={() =>
-            setLayout((prevState) =>
-              prevState === 'grid' ? 'single-grid' : 'grid'
-            )
-          }
+        </button>
+        <button
+          className="btn"
+          onClick={() => setOpen(true)}
         >
-          <PiVideoConference />
-        </Button>
-        <Button variant="secondary" onClick={() => setOpen(true)}>
           <MdMoreVert />
-        </Button>
-        <Popconfirm
-          title="Leave Call?"
-          description="Are you sure you want to leave this call?"
-          onConfirm={() => endCall()}
-          onCancel={() => {}}
-          okText="Yes"
-          cancelText="No"
+        </button>
+        <button 
+          className="btn end-call"
+          onClick={() => endCall()}
         >
-          <Button variant="danger">
-            <MdOutlineCallEnd />
-          </Button>
-        </Popconfirm>
-      </ButtonGroup>
+          <MdOutlineCallEnd />
+        </button>
+      </div>
       <Modal
         title="Settings"
-        closable={{ 'aria-label': 'Custom Close Button' }}
+        closable={{ 'aria-label': 'Custom Close button' }}
         open={open}
         okText="Done"
         onOk={() => setOpen(false)}
         onCancel={() => setOpen(false)}
-        cancelButtonProps={{ style: { display: 'none' } }}
+        cancelbuttonProps={{ style: { display: 'none' } }}
       >
         <Form layout="vertical">
           <Form.Item label="Camera">

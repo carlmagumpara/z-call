@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Nav } from 'react-bootstrap';
 import { MdDarkMode, MdLightMode, MdBrightnessAuto } from 'react-icons/md';
 
 const THEME_KEY = "theme";
@@ -65,12 +64,11 @@ const ThemeToggle = () => {
   };  
 
   return (
-    <Nav.Link 
-      type="button"
+    <button
       onClick={updateTheme}
     >
       <span className="h5">{mapping[theme]}</span>
-    </Nav.Link>
+    </button>
   )
 };
 
