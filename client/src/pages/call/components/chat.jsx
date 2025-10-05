@@ -6,6 +6,7 @@ import { BeatLoader } from 'react-spinners';
 import { useChat } from '../chat-context';
 import { usePresence } from '@/contexts/presence';
 import Avatar from '@/assets/avatar-3814081_1280.png';
+import moment from 'moment';
 
 function Chat() {
   const { messages, sendMessage, isTyping, typing, bottomRef, scrollToBottom } = useChat();
@@ -21,6 +22,15 @@ function Chat() {
     resetForm();
   };
 
+  const formatTime = (date) => {
+    const diffInSeconds = moment().diff(moment(date), "seconds");
+    if (diffInSeconds < 5) {
+      return "just now";
+    }
+
+    return moment(date).fromNow();
+  };
+
   return (
     <div className="vc-chat-container">
       <div className="vc-chat-history">
@@ -31,13 +41,15 @@ function Chat() {
           >
             <div className="chat-bubble">
               <div className="chat-avatar">
-                <img
-                  src={Avatar}
-                />
+                <div className="avatar-container">
+                  <img
+                    src={Avatar}
+                  />
+                </div>
               </div>
               <div className="chat-content">
+                <p className="username">{`${item.user_id === user_id ? 'You' : item.username}, ${formatTime(item.datetime)}`}</p>
                 <div className="message">
-                  <p>{item.username}</p>
                   <p>{item.message}</p>
                 </div>
               </div>
