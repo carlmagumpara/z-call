@@ -189,7 +189,7 @@
 .vc-chat-container {
   width: 100%;
   height: 100%;
-  border-radius: 15px;
+  border-radius: 30px;
   flex: 3 1 0;
   display: flex;
   flex-direction: column;
@@ -265,7 +265,7 @@
             border-color: transparent transparent #ffffff #ffffff;
           }
           .message {
-            border-radius: 10px 10px 0 10px;
+            border-radius: 15px 15px 0 15px;
             margin-right: 10px;
           }
         }
@@ -296,7 +296,7 @@
             border-color: transparent  #ffffff #ffffff transparent;
           }
           .message {
-            border-radius: 10px 10px 10px 0;
+            border-radius: 15px 15px 15px 0;
             margin-left: 10px;
           }
         }
@@ -308,16 +308,19 @@
 
 .vc-chat-input {
   background-color: #edf0f6;
-  height: 80px;
+  height: 90px;
   padding: 15px;
 
-  input {
+  textarea {
+    height: 100%;
+    resize: none;
     border-top-left-radius: 15px;
     border-bottom-left-radius: 15px;
     background-color: #ffffff;
   }
 
   button {
+    height: 100%;
     border-top-right-radius: 15px;
     border-bottom-right-radius: 15px;
     background-color: #ffffff;

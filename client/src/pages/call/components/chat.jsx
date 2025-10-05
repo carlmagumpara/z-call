@@ -50,7 +50,7 @@ function Chat() {
               <div className="chat-content">
                 <p className="username">{`${item.user_id === user_id ? 'You' : item.username}, ${formatTime(item.datetime)}`}</p>
                 <div className="message">
-                  <p>{item.message}</p>
+                  <p><pre>{item.message}</pre></p>
                 </div>
               </div>
             </div>
@@ -100,7 +100,7 @@ function Chat() {
         }) => (
           <form onSubmit={handleSubmit} autoComplete="off">
             <div className="vc-chat-input input-group">
-              <input
+              <textarea
                 type="text"
                 name="message" 
                 autoComplete="off"
@@ -115,8 +115,10 @@ function Chat() {
                   );
                 }}
                 onBlur={handleBlur}
-                className={`input px-3 ${errors.message && touched.message && 'is-invalid'}`}
-              />
+                rows="2" 
+                // cols="50"
+                className={`input px-3 py-2 ${errors.message && touched.message && 'is-invalid'}`}
+              ></textarea>
               <button
                 type="submit"
                 className="btn px-2"
