@@ -168,38 +168,141 @@
 }
 
 .vc-chat {
-  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
+  flex: 1 1 0;
+  // overflow: hidden;
+  // transition: flex 0.3s ease, opacity 0.3s ease;
+  // opacity: 0;
+
+  // &.show {
+  //   flex: 1 1 0;
+  //   opacity: 1;
+  // }
+
+  // &.hide {
+  //   flex: 0;
+  //   opacity: 0;
+  // }
 }
 
 .vc-chat-container {
-  background-color: #ffffff;
   width: 100%;
   height: 100%;
   border-radius: 15px;
   flex: 3 1 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid #aeaeae;
+  overflow: hidden;
 }
 
 .vc-chat-history {
-  flex: 1 1 auto;
-  display: flex;
+  flex: 1;
+  background-color: #edf0f6;
+  overflow: auto;
+  padding: 15px;
+
+  .chat-bubble-wrapper {
+    width: 100%;
+    margin-bottom: 10px;
+
+    .chat-bubble {
+      max-width: 90%;
+
+      .chat-avatar {
+        width: 30px;
+
+        img {
+          width: 100%;
+          border-radius: 50%;
+        }
+      }
+
+      .chat-content {
+        flex: 1; 
+        position: relative;
+
+        .message {
+          padding: 10px;
+          background-color: #ffffff;
+          border-radius: 10px;
+          p {
+            font-size: 13px;
+            margin-bottom: 0;
+          }
+        }
+      }
+    }
+
+    &.right-message {
+      display: flex;
+      justify-content: flex-end;
+
+      .chat-bubble {
+        display: flex;
+        flex-direction: row-reverse;
+        gap: 10px;
+
+        .chat-content {
+          &::after {
+            content: "";
+            position: absolute;
+            right: -10px;
+            top: 7px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent transparent transparent #ffffff;
+          }
+          .message {
+            margin-right: 10px;
+          }
+        }
+      }
+    }
+
+    &.left-message {
+      display: flex;
+      justify-content: flex-start;
+      position: relative;
+
+      .chat-bubble {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        .chat-content {
+          &::after {
+            content: "";
+            position: absolute;
+            left: -10px;
+            top: 7px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent #ffffff transparent transparent;
+          }
+          .message {
+            margin-left: 10px;
+          }
+        }
+      }
+    }
+
+  }
 }
 
 .vc-chat-input {
-  height: 70px;
+  background-color: #edf0f6;
+  height: 80px;
   padding: 15px;
 
   input {
     border-top-left-radius: 15px;
     border-bottom-left-radius: 15px;
+    background-color: #ffffff;
   }
 
   button {
     border-top-right-radius: 15px;
     border-bottom-right-radius: 15px;
+    background-color: #ffffff;
   }
 }

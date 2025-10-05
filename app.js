@@ -84,6 +84,24 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on("message", async ({ room_id, type, data }) => {
+    switch (type) {
+      case 'message':
+        io.to(room_id).emit("message", {
+          type,
+          data,
+        });
+        break;
+      case 'typing':
+        socket.broadcast.to(room_id).emit("message", {
+          type,
+          data,
+        });
+        break;
+      default:
+    }
+  });
+
   // conference
   socket.on("media-status", ({ room_id, data }) => {
     io.to(room_id).emit("media-status", {

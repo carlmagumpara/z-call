@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router';
 import { IoHeart } from 'react-icons/io5';
-import CountUp from 'react-countup';
 import { usePresence } from '@/contexts/presence';
 import { useGlobalModal, MODAL_TYPES } from '@/contexts/global-modal';
 import { v4 as uuidv4 } from 'uuid';

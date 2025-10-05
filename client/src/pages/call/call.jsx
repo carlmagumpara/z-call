@@ -440,7 +440,7 @@ function Call() {
         </div>
         <VideoControls  />
       </div>
-      <div className="vc-chat">
+      <div className={`vc-chat ${chat ? 'show' : 'hide'}`}>
         <Chat />
       </div>
     </div>
