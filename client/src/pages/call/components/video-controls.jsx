@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   MdVideocam,
   MdVideocamOff,
@@ -8,11 +8,16 @@ import {
   MdOutlineScreenShare,
   MdOutlineStopScreenShare,
   MdChatBubble,
-  MdMoreVert
+  MdEmojiEmotions,
+  MdMoreVert,
+  MdOutlineArrowDropUp,
 } from 'react-icons/md';
-import { Form, Popconfirm, Modal, Select } from 'antd';
+import EmojiPicker from 'emoji-picker-react';
+import { Form, Modal, Select } from 'antd';
 import { useVideoCall } from '../video-call-context';
 import { useChat } from '../chat-context';
+import { useRoom } from '../room-context';
+import { socket } from '@/shared/socket';
 
 function VideoControls() {
   const {
@@ -35,44 +40,195 @@ function VideoControls() {
     switchAudioOutput,
     endCall
   } = useVideoCall();
+  const { roomId } = useRoom();
   const { chat, setChat } = useChat();
   const [open, setOpen] = useState(false);
+  
+  const [emoji_picker, setShowEmojiPicker] = useState(false);
+  const [audio_settings, setAudioSettings] = useState(false);
+  const [video_settings, setVideoSettings] = useState(false);
+
+  const emojiRef = useRef(null);
+  const audioRef = useRef(null);
+  const videoRef = useRef(null);
+
+  const sendEmoji = emoji => {
+    socket.emit('emoji', {
+      room_id: roomId,
+      data: emoji
+    });
+  };
+
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (emojiRef.current && !emojiRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+      }
+      if (audioRef.current && !audioRef.current.contains(event.target)) {
+        setAudioSettings(false);
+      }
+      if (videoRef.current && !videoRef.current.contains(event.target)) {
+        setVideoSettings(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <>
       <div className="vc-controls">
-        <button
-          className={`btn ${audio_enabled ? 'active' : ''}`}
-          onClick={() => setTrackEnabled("audio", !audio_enabled)}
+        <div 
+          className="position-relative"
         >
-          {audio_enabled ? <MdMic /> : <MdMicOff />}
-        </button>
-        <button
-          className={`btn ${video_enabled ? 'active' : ''}`}
-          onClick={() => setTrackEnabled("video", !video_enabled)}
+          <div 
+            className="position-relative"
+          >
+            <div 
+              className="position-absolute"
+              style={{
+                right: -10,
+                top: -10,
+              }}
+            >
+              {audio_settings ? (
+                <div
+                  ref={audioRef}
+                  className="position-absolute p-3 devices"
+                  style={{
+                    bottom: 20,
+                    width: 400,
+                    backgroundColor: '#ffffff'
+                  }}
+                >
+                  <h6>Audio Input</h6>
+                  <ul>
+                    {audio_inputs.map((item) => (
+                      <li>
+                        <button
+                          className={audio_input_device_id === item.deviceId ? 'active' : ''}
+                          onClick={() => switchAudioInput(item.deviceId)}
+                        >
+                          {item.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <h6>Audio Output</h6>
+                  <ul>
+                    {audio_outputs.map((item) => (
+                      <li>
+                        <button
+                          className={audio_output_device_id === item.deviceId ? 'active' : ''}
+                          onClick={() => switchAudioOutput(item.deviceId)}
+                        >
+                          {item.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <MdOutlineArrowDropUp
+                onClick={() => setAudioSettings(prevState => !prevState)}
+                size={20} 
+              />
+            </div>
+          </div>
+          <button
+            className={`btn toogle-buttons ${audio_enabled ? 'active' : ''}`}
+            onClick={() => setTrackEnabled("audio", !audio_enabled)}
+          >
+            {audio_enabled ? <MdMic /> : <MdMicOff />}
+          </button>
+        </div>
+        <div 
+          className="position-relative"
         >
-          {video_enabled ? <MdVideocam /> : <MdVideocamOff />}
-        </button>
+          <div 
+            className="position-relative"
+          >
+            <div 
+              className="position-absolute"
+              style={{
+                right: -10,
+                top: -10,
+              }}
+            >
+              {video_settings ? (
+                <div
+                  ref={videoRef}
+                  className="position-absolute p-3 devices"
+                >
+                  <h6>Camera</h6>
+                  <ul>
+                    {video_inputs.map((item) => (
+                      <li>
+                        <button
+                          className={video_input_device_id === item.deviceId ? 'active' : ''}
+                          onClick={() => switchVideoInput(item.deviceId)}
+                        >
+                          {item.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <MdOutlineArrowDropUp
+                onClick={() => setVideoSettings(prevState => !prevState)}
+                size={20} 
+              />
+            </div>
+          </div>
+          <button
+            className={`btn toogle-buttons ${video_enabled ? 'active' : ''}`}
+            onClick={() => setTrackEnabled("video", !video_enabled)}
+          >
+            {video_enabled ? <MdVideocam /> : <MdVideocamOff />}
+          </button>
+        </div>
         <button
-          className={`btn ${screen_sharing ? 'active' : ''}`}
+          className={`btn toogle-buttons ${screen_sharing ? 'active' : ''}`}
           onClick={() => (screen_sharing ? stopScreenShare() : setupScreenShare())}
         >
           {screen_sharing ? <MdOutlineScreenShare /> : <MdOutlineStopScreenShare />}
         </button>
-        <button
+        <div 
+          className="position-relative"
+        >
+          {emoji_picker ? (
+            <div
+              ref={emojiRef}
+              className="position-absolute"
+              style={{
+                bottom: 60
+              }}
+            >
+              <EmojiPicker 
+                reactionsDefaultOpen={true}
+                onEmojiClick={sendEmoji}
+                onReactionClick={sendEmoji}
+              />
+            </div>
+          ) : null}
+          <button
+            className="btn toogle-buttons"
+            onClick={() => setShowEmojiPicker(prevState => !prevState)}
+          >
+            <MdEmojiEmotions />
+          </button>
+        </div>
+{/*        <button
           className={`btn ${chat ? 'active' : ''}`}
           onClick={() => setChat(prevState => !prevState)}
         >
           <MdChatBubble />
-        </button>
-        <button
-          className="btn"
-          onClick={() => setOpen(true)}
-        >
-          <MdMoreVert />
-        </button>
+        </button>*/}
         <button 
-          className="btn end-call"
+          className="btn toogle-buttons end-call"
           onClick={() => endCall()}
         >
           <MdOutlineCallEnd />

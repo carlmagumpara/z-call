@@ -1,13 +1,3 @@
-:root{
-  --glass-bg: rgba(255,255,255,0.12);
-  --glass-border: rgba(255,255,255,0.14);
-  --glass-shadow: 0 6px 18px rgba(0,0,0,0.28);
-  --glass-radius: 16px;
-  --glass-padding: 1.25rem;
-  --glass-blur: 12px;
-  --glass-saturate: 120%;
-}
-
 /* 1. Use a more-intuitive box-sizing model */
 *,
 *::before,
@@ -369,6 +359,88 @@ h6 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ==== POSITION HELPERS ==== */
+
+/* Base Positions */
+.position-static {
+  position: static;
+}
+
+.position-relative {
+  position: relative;
+}
+
+.position-absolute {
+  position: absolute;
+}
+
+.position-fixed {
+  position: fixed;
+}
+
+.position-sticky {
+  position: sticky;
+}
+
+/* Top / Right / Bottom / Left helpers */
+.top-0 {
+  top: 0;
+}
+
+.right-0 {
+  right: 0;
+}
+
+.bottom-0 {
+  bottom: 0;
+}
+
+.left-0 {
+  left: 0;
+}
+
+/* Centering helpers */
+.top-50 {
+  top: 50%;
+}
+
+.left-50 {
+  left: 50%;
+}
+
+.translate-middle {
+  transform: translate(-50%, -50%);
+}
+
+.translate-middle-x {
+  transform: translateX(-50%);
+}
+
+.translate-middle-y {
+  transform: translateY(-50%);
+}
+
+/* Z-index helpers */
+.z-0 {
+  z-index: 0;
+}
+
+.z-1 {
+  z-index: 1;
+}
+
+.z-10 {
+  z-index: 10;
+}
+
+.z-100 {
+  z-index: 100;
+}
+
+.z-999 {
+  z-index: 999;
 }
 
 /* ========================= SIZE HELPERS ========================= */

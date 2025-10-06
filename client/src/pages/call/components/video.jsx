@@ -19,9 +19,6 @@ function Video({ id, myself, user, media, type = 'video' }) {
     setSelected(id);
   };
 
-  useEffect(() => {
-  }, []);
-
   return (
     <div 
       className={`vc-video-container ${(type === 'screen' && !media.screen_sharing ? 'no-diplay' : '')}`}
@@ -58,6 +55,7 @@ function Video({ id, myself, user, media, type = 'video' }) {
           autoPlay={true}
         />
       ) : null}
+      <div id={`emoji-${id}`} />
       <div className="vc-video-name">
         <p>{`${user.username}${type === 'screen' ? ' (Screen)' : ''}`}</p>
       </div>

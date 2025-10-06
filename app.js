@@ -102,6 +102,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // emoji
+  socket.on("emoji", ({ room_id, data }) => {
+    io.to(room_id).emit("emoji", {
+      socket_id: socket.id,
+      data,
+    });
+  });
+
   // conference
   socket.on("media-status", ({ room_id, data }) => {
     io.to(room_id).emit("media-status", {

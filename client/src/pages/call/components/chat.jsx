@@ -107,8 +107,15 @@ function Chat() {
                 spellCheck="false"
                 placeholder="Write your message..." 
                 value={values.message}
+                onKeyDown={event => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    handleSubmit();
+                  }
+                }}
                 onChange={event => {
                   isTyping();
+
                   setFieldValue(
                     event.target.name, 
                     event.target.value
@@ -116,7 +123,6 @@ function Chat() {
                 }}
                 onBlur={handleBlur}
                 rows="2" 
-                // cols="50"
                 className={`input px-3 py-2 ${errors.message && touched.message && 'is-invalid'}`}
               ></textarea>
               <button

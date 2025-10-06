@@ -379,6 +379,28 @@ function Call() {
     });
   }, [users, video_enabled, audio_enabled, screen_sharing]);
 
+  useEffect(() => {
+    const handleEmoji = data => {
+      const emoji = document.createElement('div');
+      emoji.textContent = data.data.emoji;
+      emoji.className = 'emoji';
+      emoji.style.left = `${Math.random() * 80 + 10}%`;
+      emoji.style.bottom = '0';
+
+      const targetDiv = document.getElementById(`emoji-${data.socket_id}`);
+      if(targetDiv) {
+        targetDiv.appendChild(emoji);
+        setTimeout(() => emoji.remove(), 3000);
+      }
+    };
+
+    socket.on("emoji", handleEmoji);
+
+    return () => {
+      socket.off("emoji", handleEmoji);
+    };
+  }, []);
+
   const getVideos = () => {
     const defaultMedia = {
       screen_sharing: false,
