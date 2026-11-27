@@ -8,7 +8,6 @@ import SingleVideo from './components/single-video';
 import VideoControls from './components/video-controls';
 import { useRoom } from './room-context';
 import { useVideoCall } from './video-call-context';
-import './video.scss';
 
 function Call() {
   const socket_id = socket.id;
@@ -334,31 +333,35 @@ function Call() {
   };
 
   return (
-    <div className="call-page">
-      <header className="call-topbar">
-        <div className="call-topbar__room">
-          <span className="call-topbar__dot" />
-          <div>
-            <span className="call-topbar__label">Room</span>
-            <span className="call-topbar__code">{roomId}</span>
+    <div className="flex h-dvh min-h-page flex-col gap-3 bg-call-bg p-3 font-sans text-ink max-[760px]:min-h-0 max-[760px]:gap-2 max-[760px]:p-2">
+      <header className="flex min-h-topbar shrink-0 items-center justify-between gap-3 rounded-2xl border border-stroke bg-surface px-4 py-2.5 backdrop-blur-14 max-[760px]:min-h-topbar-sm max-[760px]:px-3 max-[760px]:py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-success shadow-dot" />
+          <div className="flex min-w-0 flex-col">
+            <span className="text-11 uppercase tracking-[0.08em] text-muted">Room</span>
+            <span className="max-w-[min(52vw,420px)] truncate whitespace-nowrap text-sm font-semibold">{roomId}</span>
           </div>
         </div>
 
-        <div className="call-topbar__right">
-          <span className="call-topbar__count">
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 text-13 text-muted [&>svg]:text-[1.1rem] max-[760px]:hidden">
             <IoPeopleOutline />
             {users.length} {users.length === 1 ? 'person' : 'people'}
           </span>
-          <button type="button" className="call-copy" onClick={copyLink}>
+          <button
+            type="button"
+            className="inline-flex min-h-copy cursor-pointer items-center gap-2 rounded-10 border border-stroke bg-surface-strong px-[14px] text-13 font-medium text-ink transition-colors duration-200 hover:border-accent-hover-border hover:bg-accent-hover-bg max-[420px]:px-[11px]"
+            onClick={copyLink}
+          >
             {copied ? <IoCheckmarkOutline /> : <IoCopyOutline />}
-            <span>{copied ? 'Copied!' : 'Copy link'}</span>
+            <span className="max-[420px]:hidden">{copied ? 'Copied!' : 'Copy link'}</span>
           </button>
         </div>
       </header>
 
-      <div className={`call-stage call-stage--${layout}`}>
+      <div className={`flex min-h-0 flex-1 ${layout === 'grid' ? '' : 'flex-col gap-3'}`}>
         {layout === 'grid' ? (
-          <div className="call-grid">
+          <div className="grid h-full w-full grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] auto-rows-min content-center gap-3 overflow-y-auto p-0.5 [scrollbar-width:thin] max-[760px]:grid-cols-1 max-[760px]:content-start">
             {getVideos().map(item => (
               <Video
                 key={item.id}
@@ -369,8 +372,10 @@ function Call() {
           </div>
         ) : (
           <>
-            <div className="main-video">{renderSingleVideo()}</div>
-            <div className="side-videos">
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-18 border border-stroke bg-void">
+              {renderSingleVideo()}
+            </div>
+            <div className="flex max-w-full shrink-0 gap-2.5 overflow-x-auto overflow-y-hidden px-0.5 pb-2 pt-0.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [&>div]:basis-[190px] [&>div]:shrink-0 max-[760px]:[&>div]:basis-[140px]">
               {getVideos().map(item => (
                 <Video
                   key={item.id}
@@ -383,7 +388,7 @@ function Call() {
         )}
       </div>
 
-      <div className="call-dock">
+      <div className="flex shrink-0 justify-center rounded-2xl border border-stroke bg-surface p-2 backdrop-blur-14">
         <VideoControls />
       </div>
     </div>
