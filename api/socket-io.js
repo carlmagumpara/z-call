@@ -130,10 +130,13 @@ io.on('connection', (socket) => {
   });
 });
 
-// Vercel stubs listen() while loading the function and captures the server, so
-// this same line starts the server locally and registers it on Vercel / vercel dev.
-server.listen(PORT, () => {
-  console.log(`z-call socket server listening on http://localhost:${PORT}`);
-});
+// On Vercel the exported server is driven by the platform: calling listen()
+// there puts the function on the "captured server" path, which breaks HTTP
+// handling and upgrades. Locally we bind the port ourselves.
+if (!process.env.VERCEL) {
+  server.listen(PORT, () => {
+    console.log(`z-call socket server listening on http://localhost:${PORT}`);
+  });
+}
 
 export default server;

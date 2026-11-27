@@ -9,6 +9,7 @@ Peer-to-peer video/audio calls with a mesh WebRTC topology. The client is a Vite
 - **Same origin.** The client connects to the deployment that served it — no hardcoded backend URL, no separate client/server deployments.
 - The built SPA is served from `client/dist` by Vercel's CDN, with a catch-all rewrite to `index.html` for `/r/:room_id`.
 - No Redis, no adapter, no second server.
+- The server calls `listen()` only when not running on Vercel (`process.env.VERCEL`); on Vercel the exported server is driven directly by the platform. Calling `listen()` there breaks upgrades.
 
 ## Deploy to Vercel
 
