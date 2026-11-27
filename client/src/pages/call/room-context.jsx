@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { socket } from '@/shared/socket';
 import VideoSettings from './components/video-settings';
 
@@ -9,10 +9,14 @@ export const useRoom = () => useContext(Context);
 function RoomProvider({ children, roomId, user }) {
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
+  const joinedRef = useRef(false);
+  const userRef = useRef(user);
+  userRef.current = user;
 
   useEffect(() => {
     const handleJoined = () => {
       console.log('handleUserJoin');
+      joinedRef.current = true;
       setJoined(true);
     };
 
@@ -39,32 +43,36 @@ function RoomProvider({ children, roomId, user }) {
         room_id: roomId,
       });
 
+      joinedRef.current = false;
       setJoined(false);
     };
 
-    const handleVisibilityChange = () => {
-      if(document.visibilityState == 'hidden') {
-        handleBeforeUnload();
+    // A reconnect may land on a different server instance, so rejoin the room.
+    const onConnect = () => {
+      if (joinedRef.current) {
+        socket.emit('join', {
+          room_id: roomId,
+          user_id: userRef.current?.user_id,
+          username: userRef.current?.username,
+        });
       }
-    }
+    };
 
     socket.on("joining", handleJoinRoom);
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
     socket.on("joined", handleJoined);
+    socket.on('connect', onConnect);
     window.addEventListener('beforeunload', handleBeforeUnload);
-    // window.addEventListener('pagehide', handleBeforeUnload);
-    // window.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       socket.off("joining", handleJoinRoom);
       socket.off("leaving", handleLeftRoom);
       socket.off("here", handleRoomUsers);
       socket.off("joined", handleJoined);
+      socket.off('connect', onConnect);
       handleBeforeUnload();
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // window.removeEventListener('pagehide', handleBeforeUnload);
-      // window.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [roomId]);
 

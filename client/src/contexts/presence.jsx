@@ -8,61 +8,52 @@ const PresenceContext = createContext();
 
 export const usePresence = () => useContext(PresenceContext);
 
+function ensureIdentity() {
+  let user_id = localStorage.getItem('user_id');
+  let username = localStorage.getItem('username');
+
+  if (!user_id || !username) {
+    user_id = uuidv4();
+    username = `${generateName()}_${Math.floor(Math.random() * 1000)}`.replace(/ /g, '_');
+    localStorage.setItem('user_id', user_id);
+    localStorage.setItem('username', username);
+  }
+
+  return { user_id, username };
+}
+
 function PresenceProvider({ children }) {
+  const [identity, setIdentity] = useState(ensureIdentity);
+  const { user_id, username } = identity;
   const [is_connected, setIsConnected] = useState(socket.connected);
-  const [user_id, setUserId] = useState(localStorage.getItem("user_id"));
-  const [username, setUserName] = useState(localStorage.getItem("username"));
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    setIsConnected(socket.connected);
-  }, [socket]);
-
-  useEffect(() => {
-    if(!user_id || !username) {
-      const _user_id = uuidv4();
-      const _username = `${generateName()}_${Math.floor(Math.random() * 1000)}`.replace(/ /g,"_");
-
-      localStorage.setItem("user_id", _user_id);
-      localStorage.setItem("username", _username);
-
-      setUserId(_user_id);
-      setUserName(_username);
-
-      return;
-    }
-
     const onConnect = () => {
-      console.log('onConnect');
-      socket.emit("user_online", {
-        user_id,
-        username
-      });
+      // Re-announce on every (re)connect: a reconnect can land on a different
+      // server instance, so presence must be recreated rather than remembered.
+      socket.emit('user_online', { user_id, username });
       setIsConnected(true);
     };
 
-    const onDisconnect = () => {
-      console.log('onDisconnect');
-      setIsConnected(false);
-    };
-
-    const onUpdateUsers = (value) => {
-      console.log('onUpdateUsers');
-      setUsers(value);
-    };
+    const onDisconnect = () => setIsConnected(false);
+    const onUpdateUsers = (value) => setUsers(value);
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('update_users', onUpdateUsers);
+
+    // The socket may already be connected before React mounts the listeners.
+    if (socket.connected) onConnect();
 
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socket.off('update_users', onUpdateUsers);
     };
-  }, [user_id]);
+  }, [user_id, username]);
 
-  if (!username || !user_id || !is_connected) {
+  if (!is_connected) {
     return <Loading />;
   }
 
@@ -71,13 +62,16 @@ function PresenceProvider({ children }) {
       value={{
         user_id,
         username,
-        setUserName,
+        setUserName: (name) => {
+          localStorage.setItem('username', name);
+          setIdentity((current) => ({ ...current, username: name }));
+        },
         users,
       }}
     >
       {children}
     </PresenceContext.Provider>
-  )
+  );
 }
 
 export default PresenceProvider;

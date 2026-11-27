@@ -1,32 +1,19 @@
-export const iceConfig = {
-  iceServers: [
-    { 
-      urls: "stun:stun.l.google.com:19302" 
-    },
-    {
-      urls: 'turn:numb.viagenie.ca',
-      credential: 'muazkh',
-      username: 'webrtc@live.com'
-    },
-    {
-      urls: 'turn:192.158.29.39:3478?transport=udp',
-      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-      username: '28224511:1379330808'
-    },
-    {
-      urls: 'turn:192.158.29.39:3478?transport=tcp',
-      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-      username: '28224511:1379330808'
-    },
-    {
-      urls: 'turn:turn.bistri.com:80',
-      credential: 'homeo',
-      username: 'homeo'
-    },
-    {
-      urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-      credential: 'webrtc',
-      username: 'webrtc'
-    }
-  ]
-};
+// Public STUN works for most networks; supply VITE_TURN_* for restrictive NATs.
+// Public "free TURN" credentials found in old demos are unreliable — use your own.
+const splitUrls = (value) =>
+  value ? value.split(',').map((url) => url.trim()).filter(Boolean) : [];
+
+const stunUrls = splitUrls(import.meta.env.VITE_STUN_URL || 'stun:stun.l.google.com:19302');
+const turnUrls = splitUrls(import.meta.env.VITE_TURN_URL);
+
+const iceServers = [{ urls: stunUrls }];
+
+if (turnUrls.length) {
+  iceServers.push({
+    urls: turnUrls,
+    username: import.meta.env.VITE_TURN_USERNAME || '',
+    credential: import.meta.env.VITE_TURN_CREDENTIAL || '',
+  });
+}
+
+export const iceConfig = { iceServers };

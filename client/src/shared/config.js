@@ -1,12 +1,9 @@
-if (import.meta.env.DEV) {
-  console.log('Running in development mode');
-} else if (import.meta.env.PROD) {
-  console.log('Running in production mode');
-} else {
-  console.log('Running in an unknown mode');
-}
+// Everything is served from one origin (the Vercel deployment). VITE_SERVER_URL
+// is only needed when the API lives on a different host.
+export const base_url = import.meta.env.VITE_SERVER_URL || window.location.origin;
 
-// export const base_url = 'https://z-call.onrender.com';
-export const base_url = import.meta.env.PROD ? 'https://z-call.onrender.com' : 'http://localhost:4000';
+// The single Socket.IO server is a Vercel Function. In dev, Vite proxies this
+// path to the local server on PORT (4000).
+export const socket_path = import.meta.env.VITE_SOCKET_PATH || '/api/socket-io';
 
 export const api_url = `${base_url}/api`;
