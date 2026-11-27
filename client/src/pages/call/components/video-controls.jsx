@@ -12,6 +12,7 @@ import {
 import { PiVideoConference, PiGridFour } from 'react-icons/pi';
 import { Form, Popconfirm, Modal, Select } from 'antd';
 import { useVideoCall } from '../video-call-context';
+import CallControlButton from './call-control-button';
 
 function VideoControls() {
   const {
@@ -38,28 +39,26 @@ function VideoControls() {
 
   return (
     <>
-      <div className="call-controls" role="toolbar" aria-label="Call controls">
-        <button
-          type="button"
-          className={`call-control ${audio_enabled ? 'is-on' : 'is-off'}`}
+      <div className="flex flex-wrap items-center justify-center gap-2" role="toolbar" aria-label="Call controls">
+        <CallControlButton
+          state={audio_enabled ? 'on' : 'off'}
           onClick={() => setTrackEnabled('audio', !audio_enabled)}
           title={audio_enabled ? 'Mute microphone' : 'Unmute microphone'}
           aria-label={audio_enabled ? 'Mute microphone' : 'Unmute microphone'}
         >
           {audio_enabled ? <MdMic /> : <MdMicOff />}
           <span>{audio_enabled ? 'Mute' : 'Unmute'}</span>
-        </button>
+        </CallControlButton>
 
-        <button
-          type="button"
-          className={`call-control ${video_enabled ? 'is-on' : 'is-off'}`}
+        <CallControlButton
+          state={video_enabled ? 'on' : 'off'}
           onClick={() => setTrackEnabled('video', !video_enabled)}
           title={video_enabled ? 'Turn camera off' : 'Turn camera on'}
           aria-label={video_enabled ? 'Turn camera off' : 'Turn camera on'}
         >
           {video_enabled ? <MdVideocam /> : <MdVideocamOff />}
           <span>{video_enabled ? 'Camera' : 'Start video'}</span>
-        </button>
+        </CallControlButton>
 
         <Popconfirm
           title="Screen Share"
@@ -73,38 +72,33 @@ function VideoControls() {
           okText="Yes"
           cancelText="No"
         >
-          <button
-            type="button"
-            className={`call-control ${screen_sharing ? 'is-active' : ''}`}
+          <CallControlButton
+            state={screen_sharing ? 'active' : 'default'}
             title={screen_sharing ? 'Stop sharing' : 'Share screen'}
             aria-label={screen_sharing ? 'Stop sharing' : 'Share screen'}
           >
             {screen_sharing ? <MdOutlineStopScreenShare /> : <MdOutlineScreenShare />}
             <span>{screen_sharing ? 'Stop share' : 'Share'}</span>
-          </button>
+          </CallControlButton>
         </Popconfirm>
 
-        <button
-          type="button"
-          className="call-control"
+        <CallControlButton
           onClick={() => setLayout(layout === 'grid' ? 'single-grid' : 'grid')}
           title={layout === 'grid' ? 'Speaker view' : 'Gallery view'}
           aria-label={layout === 'grid' ? 'Speaker view' : 'Gallery view'}
         >
           {layout === 'grid' ? <PiVideoConference /> : <PiGridFour />}
           <span>{layout === 'grid' ? 'Speaker' : 'Gallery'}</span>
-        </button>
+        </CallControlButton>
 
-        <button
-          type="button"
-          className="call-control"
+        <CallControlButton
           onClick={() => setOpen(true)}
           title="Device settings"
           aria-label="Device settings"
         >
           <MdMoreVert />
           <span>Settings</span>
-        </button>
+        </CallControlButton>
 
         <Popconfirm
           title="Leave Call?"
@@ -114,15 +108,10 @@ function VideoControls() {
           okText="Yes"
           cancelText="No"
         >
-          <button
-            type="button"
-            className="call-control call-control--end"
-            title="Leave call"
-            aria-label="Leave call"
-          >
+          <CallControlButton state="end" title="Leave call" aria-label="Leave call">
             <MdOutlineCallEnd />
             <span>Leave</span>
-          </button>
+          </CallControlButton>
         </Popconfirm>
       </div>
 
@@ -133,13 +122,13 @@ function VideoControls() {
         okText="Done"
         onOk={() => setOpen(false)}
         onCancel={() => setOpen(false)}
-        cancelButtonProps={{ style: { display: 'none' } }}
+        cancelButtonProps={{ className: '!hidden' }}
       >
         <Form layout="vertical">
           <Form.Item label="Camera">
             <Select
               defaultValue={video_input_device_id}
-              style={{ width: '100%' }}
+              className="!w-full"
               options={video_inputs.map((item) => ({
                 label: item.label,
                 value: item.deviceId,
@@ -150,7 +139,7 @@ function VideoControls() {
           <Form.Item label="Audio Input">
             <Select
               defaultValue={audio_input_device_id}
-              style={{ width: '100%' }}
+              className="!w-full"
               options={audio_inputs.map((item) => ({
                 label: item.label,
                 value: item.deviceId,
@@ -161,7 +150,7 @@ function VideoControls() {
           <Form.Item label="Audio Output">
             <Select
               defaultValue={audio_output_device_id}
-              style={{ width: '100%' }}
+              className="!w-full"
               options={audio_outputs.map((item) => ({
                 label: item.label,
                 value: item.deviceId,

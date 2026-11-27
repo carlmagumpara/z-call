@@ -1,4 +1,3 @@
-import './video.scss';
 import { useParams } from 'react-router';
 import { usePresence } from '@/contexts/presence';
 import Call from './call';

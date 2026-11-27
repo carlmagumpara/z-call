@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { MdMic, MdMicOff } from 'react-icons/md';
 import { useVideoCall } from '../video-call-context';
+import { PeerName, PeerPlaceholder } from './peer-pieces';
 
 function SingleVideo({ selected }) {
   const { pc, local_stream } = useVideoCall();
@@ -22,23 +22,13 @@ function SingleVideo({ selected }) {
     <>
       <video
         id="selected"
-        className="peer-video"
+        className="block h-full w-full object-cover"
         autoPlay={true}
         playsInline={true}
         muted={true}
       />
-      {!media?.video && (
-        <div className="peer-placeholder">
-          <span className="peer-placeholder__avatar peer-placeholder__avatar--large">{initial}</span>
-          <span className="peer-placeholder__text">Camera off</span>
-        </div>
-      )}
-      <div className="peer-name peer-name--large">
-        <span className="peer-name__label">{label}</span>
-        <span className={`peer-name__mic ${media?.audio ? '' : 'is-muted'}`}>
-          {media?.audio ? <MdMic /> : <MdMicOff />}
-        </span>
-      </div>
+      {!media?.video && <PeerPlaceholder initial={initial} large />}
+      <PeerName label={label} audio={media?.audio} large />
     </>
   );
 }

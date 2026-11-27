@@ -1,4 +1,4 @@
-import { MdMic, MdMicOff } from 'react-icons/md';
+import { PeerName, PeerPlaceholder } from './peer-pieces';
 
 function Video({ id, myself, user, media, onVideoSelect }) {
   const label = myself ? `${user.username} (You)` : user.username;
@@ -8,7 +8,7 @@ function Video({ id, myself, user, media, onVideoSelect }) {
 
   return (
     <div
-      className={`peer-tile ${media.video ? '' : 'peer-tile--off'}`}
+      className="relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-stroke bg-tile transition-[border-color,transform] duration-200 ease-in-out hover:border-accent-tile-border focus-visible:border-accent-tile-border focus-visible:shadow-tile-focus focus-visible:outline-none motion-reduce:transition-none"
       onClick={select}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -25,15 +25,10 @@ function Video({ id, myself, user, media, onVideoSelect }) {
         muted={myself}
         autoPlay={true}
         playsInline={true}
-        className="peer-video"
+        className={`block h-full w-full object-cover ${media.video ? '' : 'opacity-0'}`}
       />
 
-      {!media.video && (
-        <div className="peer-placeholder">
-          <span className="peer-placeholder__avatar">{initial}</span>
-          <span className="peer-placeholder__text">Camera off</span>
-        </div>
-      )}
+      {!media.video && <PeerPlaceholder initial={initial} />}
 
       {!myself && (
         <audio
@@ -42,12 +37,7 @@ function Video({ id, myself, user, media, onVideoSelect }) {
         />
       )}
 
-      <div className="peer-name">
-        <span className="peer-name__label">{label}</span>
-        <span className={`peer-name__mic ${media.audio ? '' : 'is-muted'}`}>
-          {media.audio ? <MdMic /> : <MdMicOff />}
-        </span>
-      </div>
+      <PeerName label={label} audio={media.audio} />
     </div>
   );
 }
