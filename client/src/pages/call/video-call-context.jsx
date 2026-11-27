@@ -53,6 +53,8 @@ function VideoCallProvider({ children }) {
   };
 
   const setTrackEnabled = (type, enabled) => {
+    if (!local_stream) return;
+
     const tracks = type === "audio" 
       ? local_stream.getAudioTracks() 
       : local_stream.getVideoTracks();

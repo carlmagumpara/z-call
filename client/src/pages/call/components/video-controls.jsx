@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Button, ButtonGroup } from 'react-bootstrap';
+import { useState } from 'react';
 import {
   MdVideocam,
   MdVideocamOff,
@@ -8,11 +7,10 @@ import {
   MdOutlineCallEnd,
   MdOutlineScreenShare,
   MdOutlineStopScreenShare,
-  MdChatBubble,
   MdMoreVert
 } from 'react-icons/md';
+import { PiVideoConference, PiGridFour } from 'react-icons/pi';
 import { Form, Popconfirm, Modal, Select } from 'antd';
-import { PiVideoConference } from 'react-icons/pi';
 import { useVideoCall } from '../video-call-context';
 
 function VideoControls() {
@@ -40,51 +38,74 @@ function VideoControls() {
 
   return (
     <>
-      <ButtonGroup size="lg">
-        <Button
-          variant={audio_enabled ? 'primary' : 'secondary'}
-          onClick={() => setTrackEnabled("audio", !audio_enabled)}
+      <div className="call-controls" role="toolbar" aria-label="Call controls">
+        <button
+          type="button"
+          className={`call-control ${audio_enabled ? 'is-on' : 'is-off'}`}
+          onClick={() => setTrackEnabled('audio', !audio_enabled)}
+          title={audio_enabled ? 'Mute microphone' : 'Unmute microphone'}
+          aria-label={audio_enabled ? 'Mute microphone' : 'Unmute microphone'}
         >
           {audio_enabled ? <MdMic /> : <MdMicOff />}
-        </Button>
-        <Button
-          variant={video_enabled ? 'primary' : 'secondary'}
-          onClick={() => setTrackEnabled("video", !video_enabled)}
+          <span>{audio_enabled ? 'Mute' : 'Unmute'}</span>
+        </button>
+
+        <button
+          type="button"
+          className={`call-control ${video_enabled ? 'is-on' : 'is-off'}`}
+          onClick={() => setTrackEnabled('video', !video_enabled)}
+          title={video_enabled ? 'Turn camera off' : 'Turn camera on'}
+          aria-label={video_enabled ? 'Turn camera off' : 'Turn camera on'}
         >
           {video_enabled ? <MdVideocam /> : <MdVideocamOff />}
-        </Button>
+          <span>{video_enabled ? 'Camera' : 'Start video'}</span>
+        </button>
+
         <Popconfirm
           title="Screen Share"
           description={
             screen_sharing
-              ? `Are you sure you want to stop sharing your screen?`
-              : `Are you sure you want to share your screen?`
+              ? 'Stop sharing your screen?'
+              : 'Share your screen with everyone in the call?'
           }
           onConfirm={() => (screen_sharing ? stopScreenShare() : setupScreenShare())}
           onCancel={() => {}}
           okText="Yes"
           cancelText="No"
         >
-          <Button variant={screen_sharing ? 'primary' : 'secondary'}>
-            {screen_sharing ? <MdOutlineScreenShare /> : <MdOutlineStopScreenShare />}
-          </Button>
+          <button
+            type="button"
+            className={`call-control ${screen_sharing ? 'is-active' : ''}`}
+            title={screen_sharing ? 'Stop sharing' : 'Share screen'}
+            aria-label={screen_sharing ? 'Stop sharing' : 'Share screen'}
+          >
+            {screen_sharing ? <MdOutlineStopScreenShare /> : <MdOutlineScreenShare />}
+            <span>{screen_sharing ? 'Stop share' : 'Share'}</span>
+          </button>
         </Popconfirm>
-        <Button variant="secondary" onClick={() => {}}>
-          <MdChatBubble />
-        </Button>
-        <Button
-          variant={layout === 'single-grid' ? 'primary' : 'secondary'}
-          onClick={() =>
-            setLayout((prevState) =>
-              prevState === 'grid' ? 'single-grid' : 'grid'
-            )
-          }
+
+        <button
+          type="button"
+          className="call-control"
+          onClick={() => setLayout(layout === 'grid' ? 'single-grid' : 'grid')}
+          title={layout === 'grid' ? 'Speaker view' : 'Gallery view'}
+          aria-label={layout === 'grid' ? 'Speaker view' : 'Gallery view'}
         >
-          <PiVideoConference />
-        </Button>
-        <Button variant="secondary" onClick={() => setOpen(true)}>
+          {layout === 'grid' ? <PiVideoConference /> : <PiGridFour />}
+          <span>{layout === 'grid' ? 'Speaker' : 'Gallery'}</span>
+        </button>
+
+        <button
+          type="button"
+          className="call-control"
+          onClick={() => setOpen(true)}
+          title="Device settings"
+          aria-label="Device settings"
+        >
           <MdMoreVert />
-        </Button>
+          <span>Settings</span>
+        </button>
+
         <Popconfirm
           title="Leave Call?"
           description="Are you sure you want to leave this call?"
@@ -93,13 +114,20 @@ function VideoControls() {
           okText="Yes"
           cancelText="No"
         >
-          <Button variant="danger">
+          <button
+            type="button"
+            className="call-control call-control--end"
+            title="Leave call"
+            aria-label="Leave call"
+          >
             <MdOutlineCallEnd />
-          </Button>
+            <span>Leave</span>
+          </button>
         </Popconfirm>
-      </ButtonGroup>
+      </div>
+
       <Modal
-        title="Settings"
+        title="Device settings"
         closable={{ 'aria-label': 'Custom Close Button' }}
         open={open}
         okText="Done"

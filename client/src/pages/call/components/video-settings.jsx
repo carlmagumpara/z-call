@@ -1,7 +1,6 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
-import { Container, Row, Col, Form, Button, ButtonGroup, Image } from 'react-bootstrap';
 import { MdMic, MdMicOff, MdVideocam, MdVideocamOff } from 'react-icons/md';
 import Logo from '@/assets/logo.png';
 
@@ -9,17 +8,34 @@ import { useRoom } from '../room-context';
 import { useVideoCall } from '../video-call-context';
 
 function VideoSettings({ user }) {
-  const { joinRoom } = useRoom();
-  const { setVideoEnabled, setAudioEnabled } = useVideoCall();
+  const { roomId, joinRoom } = useRoom();
+  const {
+    local_stream,
+    initializeLocalStream,
+    setVideoEnabled,
+    setAudioEnabled
+  } = useVideoCall();
+  const previewRef = useRef(null);
+
+  useEffect(() => {
+    initializeLocalStream();
+  }, []);
+
+  useEffect(() => {
+    if (previewRef.current && local_stream) {
+      previewRef.current.srcObject = local_stream;
+    }
+  }, [local_stream]);
 
   const onSubmit = async (values, { setSubmitting }) => {
     setVideoEnabled(values.video);
     setAudioEnabled(values.audio);
     joinRoom(user.user_id, values.username);
+    setSubmitting(false);
   };
 
   return (
-    <Container>
+    <div className="prejoin">
       <Formik
         initialValues={{
           ...user,
@@ -28,7 +44,7 @@ function VideoSettings({ user }) {
         }}
         validationSchema={() =>
           Yup.object().shape({
-            username: Yup.string().required('Required'),
+            username: Yup.string().required('Please enter your name'),
           })
         }
         onSubmit={onSubmit}
@@ -43,68 +59,57 @@ function VideoSettings({ user }) {
           isSubmitting,
           setFieldValue,
         }) => (
-          <Form onSubmit={handleSubmit} autoComplete="off">
-            <Row>
-              <Col
-                md={{ span: 4, offset: 4 }}
-                className="vh-100 d-flex justify-content-center align-items-center"
+          <form className="prejoin__card" onSubmit={handleSubmit} autoComplete="off">
+            <img className="prejoin__logo" src={Logo} alt="zCall" />
+            <h1 className="prejoin__title">Ready to join?</h1>
+            <p className="prejoin__subtitle">Check your camera and mic before entering the room.</p>
+
+            <div className="settings-video-container">
+              <video ref={previewRef} muted autoPlay playsInline />
+            </div>
+
+            <div className="prejoin__field">
+              <label htmlFor="username">Your name</label>
+              <input
+                id="username"
+                name="username"
+                placeholder="How should we call you?"
+                value={values.username}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className={errors.username && touched.username ? 'is-invalid' : ''}
+              />
+              {errors.username && touched.username && (
+                <p className="prejoin__error">{errors.username}</p>
+              )}
+            </div>
+
+            <div className="prejoin__toggles">
+              <button
+                type="button"
+                className={`prejoin__toggle ${values.audio ? 'is-on' : 'is-off'}`}
+                onClick={() => setFieldValue('audio', !values.audio)}
               >
-                <div className="w-100">
-                  <div className="d-flex justify-content-center align-items-center mb-5">
-                    <Image
-                      src={Logo}
-                      alt="logo"
-                      style={{ width: 150 }}
-                    />
-                  </div>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="text-white">Username</Form.Label>
-                    <Form.Control
-                      name="username"
-                      placeholder="Username"
-                      value={values.username}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={
-                        errors.username && touched.username && 'is-invalid'
-                      }
-                    />
-                    {errors.username && touched.username && (
-                      <Form.Control.Feedback type="invalid">
-                        {errors.username}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                  <ButtonGroup size="lg">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setFieldValue('audio', !values.audio)}
-                    >
-                      {values.audio ? <MdMic /> : <MdMicOff />}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setFieldValue('video', !values.video)}
-                    >
-                      {values.video ? <MdVideocam /> : <MdVideocamOff />}
-                    </Button>
-                  </ButtonGroup>
-                  <div className="d-flex justify-content-end align-items-center">
-                    <Button
-                      type="submit"
-                      variant="danger"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? 'Please wait...' : 'Join Call'}
-                    </Button>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          </Form>
+                {values.audio ? <MdMic /> : <MdMicOff />}
+                {values.audio ? 'Mic on' : 'Mic off'}
+              </button>
+              <button
+                type="button"
+                className={`prejoin__toggle ${values.video ? 'is-on' : 'is-off'}`}
+                onClick={() => setFieldValue('video', !values.video)}
+              >
+                {values.video ? <MdVideocam /> : <MdVideocamOff />}
+                {values.video ? 'Camera on' : 'Camera off'}
+              </button>
+            </div>
+
+            <button type="submit" className="prejoin__submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Joining…' : `Join room ${roomId.slice(0, 8)}`}
+            </button>
+          </form>
         )}
       </Formik>
-    </Container>
+    </div>
   );
 }
 

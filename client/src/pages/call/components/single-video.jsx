@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { MdVideocam, MdVideocamOff, MdMic, MdMicOff } from 'react-icons/md';
+import { MdMic, MdMicOff } from 'react-icons/md';
 import { useVideoCall } from '../video-call-context';
 
 function SingleVideo({ selected }) {
@@ -8,31 +8,36 @@ function SingleVideo({ selected }) {
 
   useEffect(() => {
     const selectedVideoEl = document.getElementById("selected");
-    const stream = pc.current[selected?.id]?.remoteStream || local_stream;
-    if(selectedVideoEl && stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      selectedVideoEl.srcObject = new MediaStream([videoTrack]);
+    const stream = pc.current[id]?.remoteStream || local_stream;
+    const track = stream?.getVideoTracks?.()[0];
+    if (selectedVideoEl && track) {
+      selectedVideoEl.srcObject = new MediaStream([track]);
     }
-  }, [selected, local_stream]);
+  }, [id, selected, local_stream]);
+
+  const label = myself ? `${user?.username || 'You'} (You)` : (user?.username || 'Participant');
+  const initial = (user?.username || '?').trim().charAt(0).toUpperCase();
 
   return (
     <>
-      <video 
+      <video
         id="selected"
+        className="peer-video"
         autoPlay={true}
         playsInline={true}
         muted={true}
       />
-      <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
-        <p className="left-name">
-          {myself ? `${user.username} (You)` : user.username}
-        </p>
-        <p className="left-mic">
-          {media.audio ? <MdMic /> : <MdMicOff />}
-        </p>
-        <p className="left-video">
-          {media.video ? <MdVideocam /> : <MdVideocamOff />}
-        </p>
+      {!media?.video && (
+        <div className="peer-placeholder">
+          <span className="peer-placeholder__avatar peer-placeholder__avatar--large">{initial}</span>
+          <span className="peer-placeholder__text">Camera off</span>
+        </div>
+      )}
+      <div className="peer-name peer-name--large">
+        <span className="peer-name__label">{label}</span>
+        <span className={`peer-name__mic ${media?.audio ? '' : 'is-muted'}`}>
+          {media?.audio ? <MdMic /> : <MdMicOff />}
+        </span>
       </div>
     </>
   );

@@ -1,10 +1,24 @@
-import { MdVideocam, MdVideocamOff, MdMic, MdMicOff } from 'react-icons/md';
+import { MdMic, MdMicOff } from 'react-icons/md';
 
 function Video({ id, myself, user, media, onVideoSelect }) {
+  const label = myself ? `${user.username} (You)` : user.username;
+  const initial = (user.username || '?').trim().charAt(0).toUpperCase();
+
+  const select = () => onVideoSelect(myself ? null : id);
+
   return (
     <div
-      className="peer-tile"
-      onClick={() => onVideoSelect(myself ? null : id)}
+      className={`peer-tile ${media.video ? '' : 'peer-tile--off'}`}
+      onClick={select}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          select();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Focus on ${label}`}
     >
       <video
         id={myself ? 'local' : `remote-video-${id}`}
@@ -13,22 +27,26 @@ function Video({ id, myself, user, media, onVideoSelect }) {
         playsInline={true}
         className="peer-video"
       />
-      {!myself ? (
-        <audio 
+
+      {!media.video && (
+        <div className="peer-placeholder">
+          <span className="peer-placeholder__avatar">{initial}</span>
+          <span className="peer-placeholder__text">Camera off</span>
+        </div>
+      )}
+
+      {!myself && (
+        <audio
           id={`remote-audio-${id}`}
           autoPlay={true}
         />
-      ) : null}
-      <div className={`peer-name ${media.video ? 'video-on' : 'video-off'}`}>
-        <p className="left-name">
-          {myself ? `${user.username} (You)` : user.username}
-        </p>
-        <p className="left-mic">
+      )}
+
+      <div className="peer-name">
+        <span className="peer-name__label">{label}</span>
+        <span className={`peer-name__mic ${media.audio ? '' : 'is-muted'}`}>
           {media.audio ? <MdMic /> : <MdMicOff />}
-        </p>
-        <p className="left-video">
-          {media.video ? <MdVideocam /> : <MdVideocamOff />}
-        </p>
+        </span>
       </div>
     </div>
   );

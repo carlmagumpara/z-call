@@ -1,6 +1,6 @@
-import adapter from 'webrtc-adapter';
+import 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
-import { Container, Button, ButtonGroup } from 'react-bootstrap';
+import { IoCopyOutline, IoCheckmarkOutline, IoPeopleOutline } from 'react-icons/io5';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
 import Video from './components/video';
@@ -8,53 +8,51 @@ import SingleVideo from './components/single-video';
 import VideoControls from './components/video-controls';
 import { useRoom } from './room-context';
 import { useVideoCall } from './video-call-context';
+import './video.scss';
 
 function Call() {
   const socket_id = socket.id;
   const { roomId, users } = useRoom();
   const {
     pc,
-    audio,
-    video_input_device_id,
-    audio_input_device_id,
-    audio_output_device_id,
     local_stream,
-    video_enabled, 
+    video_enabled,
     audio_enabled,
     screen_sharing,
     layout,
     initializeLocalStream,
-    setupScreenShare,
-    setTrackEnabled,
     setLayout,
-    media_status, 
+    media_status,
     setMediaStatus
   } = useVideoCall();
   const pendingCandidates = useRef({});
   const [selected, setSelected] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    initializeLocalStream();
+    // The pre-join screen may have already acquired the camera/mic.
+    if (!local_stream) initializeLocalStream();
   }, []);
 
   const updateRemoteStreams = async (peerId, remoteStream) => {
+    if (!remoteStream) return;
     const videoTrack = remoteStream.getVideoTracks()[0];
     const audioTrack = remoteStream.getAudioTracks()[0];
     const remoteVideoEl = document.getElementById(`remote-video-${peerId}`);
     const remoteAudioEl = document.getElementById(`remote-audio-${peerId}`);
-    if (remoteVideoEl) {
+    if (remoteVideoEl && videoTrack) {
       remoteVideoEl.srcObject = new MediaStream([videoTrack]);
-    };
-    if(remoteAudioEl) {
+    }
+    if (remoteAudioEl && audioTrack) {
       remoteAudioEl.srcObject = new MediaStream([audioTrack]);
-    }    
+    }
   };
 
   useEffect(() => {
     const localVideoEl = document.getElementById("local");
     if (localVideoEl) {
       localVideoEl.srcObject = local_stream;
-    };
+    }
 
     Object.keys(pc.current || {}).forEach(peerId => {
       const remoteStream = pc.current[peerId].remoteStream;
@@ -73,9 +71,9 @@ function Call() {
 
     const onIceCandidate = (event, peerId) => {
       if (event.candidate) {
-        socket.emit("ice-candidate", { 
-          to: peerId, 
-          candidate: event.candidate 
+        socket.emit("ice-candidate", {
+          to: peerId,
+          candidate: event.candidate
         });
       }
     };
@@ -110,7 +108,7 @@ function Call() {
         console.log("ICE restart triggered for", peerId);
       } catch (err) {
         console.error("ICE restart failed, rebuilding connection", err);
-        return rebuildPeerConnection(peerId); 
+        return rebuildPeerConnection(peerId);
       }
 
       setTimeout(() => attemptReconnect(peerId, retries - 1, delay), delay);
@@ -139,9 +137,9 @@ function Call() {
       const offer = await conn.createOffer();
       await conn.setLocalDescription(offer);
 
-      socket.emit("offer", { 
-        to: peerId, 
-        sdp: offer 
+      socket.emit("offer", {
+        to: peerId,
+        sdp: offer
       });
     };
 
@@ -218,7 +216,7 @@ function Call() {
         console.warn("Peer connection not found for ICE candidate from:", from);
         return;
       }
-      
+
       if (conn.remoteDescription) {
         try {
           await conn.addIceCandidate(new RTCIceCandidate(candidate));
@@ -290,8 +288,8 @@ function Call() {
   const getVideos = () => {
     const defaultMedia = {
       screen_sharing: false,
-      audio: false, 
-      video: false 
+      audio: false,
+      video: false
     };
 
     return users
@@ -304,12 +302,18 @@ function Call() {
   };
 
   const renderSingleVideo = () => {
-    const localVideo = getVideos().find(item => item.myself);
+    const defaultMedia = { screen_sharing: false, audio: false, video: false };
+    const localVideo = getVideos().find(item => item.myself) || {
+      id: socket_id,
+      myself: true,
+      user: { username: 'You' },
+      media: defaultMedia,
+    };
     const singleVideo = getVideos().find(item => item.id === selected);
 
     return (
-      <SingleVideo 
-        selected={(selected && singleVideo) ? singleVideo : localVideo} 
+      <SingleVideo
+        selected={(selected && singleVideo) ? singleVideo : localVideo}
       />
     );
   };
@@ -319,26 +323,53 @@ function Call() {
     setSelected(item);
   };
 
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   return (
-    <div className="d-flex flex-column w-100 vh-100">
-      <div className="flex-grow-1 w-100 overflow-auto video-call-container">
+    <div className="call-page">
+      <header className="call-topbar">
+        <div className="call-topbar__room">
+          <span className="call-topbar__dot" />
+          <div>
+            <span className="call-topbar__label">Room</span>
+            <span className="call-topbar__code">{roomId}</span>
+          </div>
+        </div>
+
+        <div className="call-topbar__right">
+          <span className="call-topbar__count">
+            <IoPeopleOutline />
+            {users.length} {users.length === 1 ? 'person' : 'people'}
+          </span>
+          <button type="button" className="call-copy" onClick={copyLink}>
+            {copied ? <IoCheckmarkOutline /> : <IoCopyOutline />}
+            <span>{copied ? 'Copied!' : 'Copy link'}</span>
+          </button>
+        </div>
+      </header>
+
+      <div className={`call-stage call-stage--${layout}`}>
         {layout === 'grid' ? (
-          <div className="video-call-container-grid">
-            <div className="video-masonry">
-              {getVideos().map(item => (
-                <Video
-                  key={item.id}
-                  onVideoSelect={onVideoSelect}
-                  {...item}
-                />
-              ))}
-            </div>
+          <div className="call-grid">
+            {getVideos().map(item => (
+              <Video
+                key={item.id}
+                onVideoSelect={onVideoSelect}
+                {...item}
+              />
+            ))}
           </div>
         ) : (
-          <div className="video-call-container-single-grid">
-            <div className="main-video">
-              {renderSingleVideo()}
-            </div>
+          <>
+            <div className="main-video">{renderSingleVideo()}</div>
             <div className="side-videos">
               {getVideos().map(item => (
                 <Video
@@ -348,15 +379,12 @@ function Call() {
                 />
               ))}
             </div>
-          </div>
+          </>
         )}
       </div>
-      <div className="flex-shrink-1 video-call-controls-container">
-        <div
-          className="d-flex justify-content-center align-items-center w-100 h-100 bottom-0"
-        >
-          <VideoControls />
-        </div>
+
+      <div className="call-dock">
+        <VideoControls />
       </div>
     </div>
   );
