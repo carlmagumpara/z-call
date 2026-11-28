@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import Avatar from 'boring-avatars';
-import { IoChatbubblesOutline } from 'react-icons/io5';
 import Logo from '@/assets/logo.png';
 import { usePresence } from '@/contexts/presence';
-import { useChat } from '@/hooks/use-chat';
 import { useGlobalModal, MODAL_TYPES } from '@/contexts/global-modal';
 
 function Navigation() {
   const { handleShow } = useGlobalModal();
   const { username } = usePresence();
-  const { unreadCount } = useChat();
   const [expanded, setExpanded] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -59,21 +56,6 @@ function Navigation() {
           id="basic-navbar-nav"
           className={`${expanded ? 'flex' : 'hidden'} w-full flex-col gap-2 lg:flex lg:w-auto lg:flex-row lg:items-center`}
         >
-          <Link
-            to="/chat"
-            onClick={() => setExpanded(false)}
-            className="relative inline-flex items-center gap-2 rounded-md px-2 py-1 text-white transition-colors hover:bg-white/10"
-            aria-label={unreadCount ? `Messages, ${unreadCount} unread` : 'Messages'}
-          >
-            <IoChatbubblesOutline />
-            <span>Messages</span>
-            {unreadCount > 0 && (
-              <span className="inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-10 font-semibold text-white">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </Link>
-
           <div className="relative lg:ml-auto" ref={dropdownRef}>
             <button
               type="button"

@@ -7,7 +7,7 @@ import ChatHeader from './chat-header';
 import MessageList from './message-list';
 import MessageComposer from './message-composer';
 
-/** Shared by the standalone chat page and the in-call chat drawer. */
+/** Conversation views used by the in-call chat drawer. */
 export function ChatSidebar({ onClose }) {
   const { users, activePeerId, unread, selectPeer } = useChat();
   const { showConversation } = useChatLayout();

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useChat } from '@/hooks/use-chat';
-import ChatLayout from '@/pages/chat/components/chat-layout';
-import { ChatSidebar, ChatConversation } from '@/pages/chat/components/chat-views';
+import ChatLayout from '@/components/chat/chat-layout';
+import { ChatSidebar, ChatConversation } from '@/components/chat/chat-views';
 
 /** In-call drawer built from the same chat components as the /chat page. */
 function ChatPanel({ open, onClose }) {

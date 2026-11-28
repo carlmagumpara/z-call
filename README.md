@@ -7,18 +7,15 @@ Peer-to-peer video/audio calls with a mesh WebRTC topology. The client is a Vite
 - **One Vercel project, one Function.** `api/socket-io.js` exports an `http.Server` with Socket.IO attached. Vercel's Fluid Compute accepts the WebSocket upgrade directly.
 - **WebSocket transport only.** HTTP long-polling does not work on serverless functions, so the client is configured with `transports: ['websocket']` and connects on `/api/socket-io` — the exact path of the one Function.
 - **Same origin.** The client connects to the deployment that served it — no hardcoded backend URL, no separate client/server deployments.
-- The built SPA is served from `client/dist` by Vercel's CDN, with a catch-all rewrite to `index.html` for SPA routes such as `/r/:room_id` and `/chat`.
+- The built SPA is served from `client/dist` by Vercel's CDN, with a catch-all rewrite to `index.html` for `/r/:room_id`.
 - No Redis, no adapter, no second server.
 - The server calls `listen()` only when not running on Vercel (`process.env.VERCEL`); on Vercel the exported server is driven directly by the platform. Calling `listen()` there breaks upgrades.
 
 ## Chat (ephemeral, one-to-one)
 
-Two entry points, one implementation:
+Chat lives **inside the video call only**. Open the **Chat** button in a call header to show the slide-over drawer with a connected-user sidebar and one-to-one conversations. There is no standalone chat page or top-level navigation entry.
 
-- `/chat` — full-page messaging with a connected-user sidebar.
-- The **Chat** button in a call header — the same UI as a slide-over drawer.
-
-Both use the existing shared Socket.IO connection and the generated `user_id` / `username` from the presence context (there is no separate login system). Messages are relayed to the two participants' in-memory user rooms and held **only in React state**. There is no database, no history endpoint, no `localStorage` copy, and no offline queue: refresh, navigating away, or ending the conversation discards everything. A message to an offline user is dropped, never queued. Presence and active conversations likewise exist only in the server's memory and are re-registered on reconnect.
+The drawer uses the existing shared Socket.IO connection and the generated `user_id` / `username` from the presence context (there is no separate login system), and the chat provider is mounted only while the call route is active. Messages are relayed to the two participants' in-memory user rooms and held **only in React state**. There is no database, no history endpoint, no `localStorage` copy, and no offline queue: refresh, leaving the call, or ending the conversation discards everything. A message to an offline user is dropped, never queued. Presence and active conversations likewise exist only in the server's memory and are re-registered on reconnect.
 
 ### Events
 
@@ -72,7 +69,7 @@ npm run dev:client      # Vite on http://localhost:5173
 
 Vite proxies `/api/socket-io` to the local server, so the client uses the same socket path in dev and production. `npm run build` builds the client exactly as Vercel does. `npm start` runs just the socket server. Use this two-terminal flow rather than `vercel dev` for websocket work — some Vercel CLI versions cannot proxy upgrades locally.
 
-To try chat, open `http://localhost:5173/chat` in two different browser profiles (or one normal and one incognito window) — each gets its own generated identity. Pick each other in the sidebar and send messages; reload either tab to confirm nothing is restored. The same UI is available from the **Chat** button inside a call.
+To try chat, open the same room link (for example `http://localhost:5173/r/test-room`) in two different browser profiles (or one normal and one incognito window) — each gets its own generated identity. Join the call in both, open **Chat** in the call header, pick each other in the sidebar and send messages; reload either tab to confirm nothing is restored.
 
 No extra environment variables or scripts are required for chat: it shares the existing socket path and the single Function. `VITE_SERVER_URL` / `VITE_SOCKET_PATH` / `CORS_ORIGIN` from the table above still apply if you split the deployment.
 
