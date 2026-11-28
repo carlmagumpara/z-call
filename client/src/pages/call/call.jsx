@@ -1,17 +1,20 @@
 import 'webrtc-adapter';
 import { useState, useEffect, useRef } from 'react';
-import { IoCopyOutline, IoCheckmarkOutline, IoPeopleOutline } from 'react-icons/io5';
+import { IoCopyOutline, IoCheckmarkOutline, IoPeopleOutline, IoChatbubbleOutline } from 'react-icons/io5';
 import { socket } from '@/shared/socket';
 import { iceConfig } from './config';
+import { useChat } from '@/hooks/use-chat';
 import Video from './components/video';
 import SingleVideo from './components/single-video';
 import VideoControls from './components/video-controls';
+import ChatPanel from './components/chat';
 import { useRoom } from './room-context';
 import { useVideoCall } from './video-call-context';
 
 function Call() {
   const socket_id = socket.id;
   const { roomId, users } = useRoom();
+  const { unreadCount } = useChat();
   const {
     pc,
     local_stream,
@@ -29,6 +32,7 @@ function Call() {
   const selectedTrackRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [streamsVersion, setStreamsVersion] = useState(0);
   selectedRef.current = selected;
 
@@ -379,6 +383,20 @@ function Call() {
           </span>
           <button
             type="button"
+            className="relative inline-flex min-h-copy cursor-pointer items-center gap-2 rounded-10 border border-stroke bg-surface-strong px-[14px] text-13 font-medium text-ink transition-colors duration-200 hover:border-accent-hover-border hover:bg-accent-hover-bg max-[420px]:px-[11px]"
+            onClick={() => setChatOpen(true)}
+            aria-label={unreadCount ? `Open chat, ${unreadCount} unread` : 'Open chat'}
+          >
+            <IoChatbubbleOutline />
+            <span className="max-[420px]:hidden">Chat</span>
+            {unreadCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-10 font-semibold text-white">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
             className="inline-flex min-h-copy cursor-pointer items-center gap-2 rounded-10 border border-stroke bg-surface-strong px-[14px] text-13 font-medium text-ink transition-colors duration-200 hover:border-accent-hover-border hover:bg-accent-hover-bg max-[420px]:px-[11px]"
             onClick={copyLink}
           >
@@ -420,6 +438,8 @@ function Call() {
       <div className="flex shrink-0 justify-center rounded-2xl border border-stroke bg-surface p-2 backdrop-blur-14">
         <VideoControls />
       </div>
+
+      <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }

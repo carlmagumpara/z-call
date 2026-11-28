@@ -8,10 +8,12 @@
  * Locally: `npm run server` runs this same file on PORT (default 4000).
  */
 import { createServer } from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { Server } from 'socket.io';
 
 const PORT = Number(process.env.PORT) || 4000;
 const SOCKET_PATH = process.env.SOCKET_PATH || '/api/socket-io';
+const MAX_MESSAGE_LENGTH = 4000;
 
 const server = createServer();
 
@@ -40,14 +42,25 @@ const onlineUsers = new Map();
 const roomMediaStatus = new Map();
 
 const publishUsers = () => io.emit('update_users', [...onlineUsers.values()]);
+const userRoom = (id) => `user:${id}`;
+// Stable id for a one-to-one conversation, independent of who starts it.
+const conversationId = (a, b) => `conv:${[a, b].sort().join('::')}`;
 
 io.on('connection', (socket) => {
   socket.on('user_online', ({ user_id, username } = {}) => {
     const id = clean(user_id);
     if (!id) return;
 
+    // Private messages go to a per-identity room. Only the latest socket for
+    // an identity stays in it, so stale tabs cannot receive duplicates.
+    const previous = onlineUsers.get(id);
+    if (previous && previous.socket_id !== socket.id) {
+      io.sockets.sockets.get(previous.socket_id)?.leave(userRoom(id));
+    }
+
     socket.data.user_id = id;
     socket.data.username = clean(username) || 'Guest';
+    socket.join(userRoom(id));
 
     onlineUsers.set(id, {
       user_id: id,
@@ -56,6 +69,11 @@ io.on('connection', (socket) => {
     });
 
     publishUsers();
+    io.emit('presence:update', {
+      user_id: id,
+      username: socket.data.username,
+      online: true,
+    });
   });
 
   socket.on('join', ({ room_id, user_id, username } = {}) => {
@@ -125,6 +143,105 @@ io.on('connection', (socket) => {
     io.to(room).emit('media-status', { socket_id: socket.id, data });
   });
 
+  // ---- Ephemeral one-to-one chat -----------------------------------------
+  // Nothing here is stored. A message is relayed to the participants who are
+  // online at that instant and then forgotten; an offline recipient gets no
+  // queue and a reconnecting client gets no history.
+
+  socket.on('users:list', () => {
+    socket.emit('users:list', [...onlineUsers.values()]);
+  });
+
+  socket.on('conversation:join', ({ peer_id } = {}) => {
+    const me = socket.data.user_id;
+    const peerId = clean(peer_id);
+    if (!me || !peerId || peerId === me) return;
+
+    const peer = onlineUsers.get(peerId);
+    if (!peer) return;
+
+    const nextId = conversationId(me, peerId);
+    if (socket.data.conversation_id && socket.data.conversation_id !== nextId) {
+      socket.leave(socket.data.conversation_id);
+    }
+
+    socket.join(nextId);
+    socket.data.conversation_id = nextId;
+    socket.data.peer_id = peerId;
+    socket.emit('conversation:join', {
+      conversation_id: nextId,
+      peer: {
+        user_id: peerId,
+        username: peer.username,
+        socket_id: peer.socket_id,
+        online: true,
+      },
+    });
+  });
+
+  socket.on('conversation:leave', ({ peer_id } = {}) => {
+    const current = socket.data.conversation_id;
+    if (!current) return;
+
+    const requested = clean(peer_id);
+    if (requested && socket.data.user_id && current !== conversationId(socket.data.user_id, requested)) {
+      return;
+    }
+
+    socket.leave(current);
+    delete socket.data.conversation_id;
+    delete socket.data.peer_id;
+
+    if (socket.data.typing_to) {
+      io.to(userRoom(socket.data.typing_to)).emit('typing:stop', { from: socket.data.user_id });
+      delete socket.data.typing_to;
+    }
+  });
+
+  socket.on('message:send', ({ to, text } = {}) => {
+    // Identity always comes from the socket that was registered with
+    // `user_online`, never from a client-supplied `from` field.
+    const from = socket.data.user_id;
+    const target = clean(to);
+    if (!from || !target || target === from) return;
+    if (!onlineUsers.has(target)) return; // offline recipient: drop, don't queue
+
+    const body = typeof text === 'string' ? text.trim() : '';
+    if (!body || body.length > MAX_MESSAGE_LENGTH) return;
+
+    const message = {
+      id: randomUUID(),
+      conversation_id: conversationId(from, target),
+      from,
+      to: target,
+      text: body,
+      created_at: Date.now(),
+    };
+
+    io.to(userRoom(from)).emit('message:new', message);
+    io.to(userRoom(target)).emit('message:new', message);
+  });
+
+  const relayTyping = (event) => ({ to } = {}) => {
+    const from = socket.data.user_id;
+    const target = clean(to);
+    if (!from || !target || target === from || !onlineUsers.has(target)) return;
+
+    if (event === 'typing:start') {
+      socket.data.typing_to = target;
+    } else if (socket.data.typing_to === target) {
+      delete socket.data.typing_to;
+    }
+
+    io.to(userRoom(target)).emit(event, {
+      from,
+      conversation_id: conversationId(from, target),
+    });
+  };
+
+  socket.on('typing:start', relayTyping('typing:start'));
+  socket.on('typing:stop', relayTyping('typing:stop'));
+
   // WebRTC signalling: forward only to the intended peer in the same instance.
   const relay = (event) => ({ to, ...rest } = {}) => {
     const target = clean(to);
@@ -138,9 +255,19 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const id = socket.data.user_id;
+
+    if (socket.data.typing_to) {
+      io.to(userRoom(socket.data.typing_to)).emit('typing:stop', { from: id });
+    }
+
     if (id && onlineUsers.get(id)?.socket_id === socket.id) {
       onlineUsers.delete(id);
       publishUsers();
+      io.emit('presence:update', {
+        user_id: id,
+        username: socket.data.username,
+        online: false,
+      });
     }
 
     const room = socket.data.room_id;

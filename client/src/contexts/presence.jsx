@@ -1,8 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { socket } from '@/shared/socket';
 import { generateName } from '@/shared/names';
-import Loading from '@/shared/loading';
 
 const PresenceContext = createContext();
 
@@ -27,12 +26,16 @@ function PresenceProvider({ children }) {
   const { user_id, username } = identity;
   const [is_connected, setIsConnected] = useState(socket.connected);
   const [users, setUsers] = useState([]);
+  // Keep the UI mounted while the socket reconnects: chat messages stay in
+  // memory and call controls don't disappear mid-reconnection.
+  const hasConnectedRef = useRef(socket.connected);
 
   useEffect(() => {
     const onConnect = () => {
       // Re-announce on every (re)connect: a reconnect can land on a different
       // server instance, so presence must be recreated rather than remembered.
       socket.emit('user_online', { user_id, username });
+      hasConnectedRef.current = true;
       setIsConnected(true);
     };
 
@@ -53,10 +56,6 @@ function PresenceProvider({ children }) {
     };
   }, [user_id, username]);
 
-  if (!is_connected) {
-    return <Loading />;
-  }
-
   return (
     <PresenceContext.Provider
       value={{
@@ -69,6 +68,16 @@ function PresenceProvider({ children }) {
         users,
       }}
     >
+      {!is_connected && (
+        <div
+          className="fixed inset-x-0 top-2 z-[60] mx-auto flex w-fit items-center gap-2 rounded-full border border-stroke-strong bg-[#0e1422]/95 px-4 py-2 text-13 text-slate-label shadow-prejoin-card backdrop-blur-md"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="h-2 w-2 animate-pulse rounded-full bg-danger motion-reduce:animate-none" />
+          {hasConnectedRef.current ? 'Reconnecting…' : 'Connecting…'}
+        </div>
+      )}
       {children}
     </PresenceContext.Provider>
   );
