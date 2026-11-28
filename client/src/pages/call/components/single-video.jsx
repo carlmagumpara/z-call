@@ -1,19 +1,7 @@
-import { useEffect } from 'react';
-import { useVideoCall } from '../video-call-context';
 import { PeerName, PeerPlaceholder } from './peer-pieces';
 
 function SingleVideo({ selected }) {
-  const { pc, local_stream } = useVideoCall();
-  const { id, myself, user, media } = selected || {};
-
-  useEffect(() => {
-    const selectedVideoEl = document.getElementById("selected");
-    const stream = pc.current[id]?.remoteStream || local_stream;
-    const track = stream?.getVideoTracks?.()[0];
-    if (selectedVideoEl && track) {
-      selectedVideoEl.srcObject = new MediaStream([track]);
-    }
-  }, [id, selected, local_stream]);
+  const { myself, user, media } = selected || {};
 
   const label = myself ? `${user?.username || 'You'} (You)` : (user?.username || 'Participant');
   const initial = (user?.username || '?').trim().charAt(0).toUpperCase();
@@ -22,7 +10,7 @@ function SingleVideo({ selected }) {
     <>
       <video
         id="selected"
-        className="block h-full w-full object-cover"
+        className={`block h-full w-full object-cover ${myself ? '-scale-x-100' : ''}`}
         autoPlay={true}
         playsInline={true}
         muted={true}

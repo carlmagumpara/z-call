@@ -13,8 +13,7 @@ function VideoSettings({ user }) {
   const {
     local_stream,
     initializeLocalStream,
-    setVideoEnabled,
-    setAudioEnabled
+    setTrackEnabled
   } = useVideoCall();
   const previewRef = useRef(null);
 
@@ -28,9 +27,15 @@ function VideoSettings({ user }) {
     }
   }, [local_stream]);
 
+  const toggleTrack = (type, enabled, setFieldValue) => {
+    setFieldValue(type, enabled);
+    // Enable/disable the real track so the preview shows video immediately.
+    setTrackEnabled(type, enabled);
+  };
+
   const onSubmit = async (values, { setSubmitting }) => {
-    setVideoEnabled(values.video);
-    setAudioEnabled(values.audio);
+    setTrackEnabled('audio', values.audio);
+    setTrackEnabled('video', values.video);
     joinRoom(user.user_id, values.username);
     setSubmitting(false);
   };
@@ -94,7 +99,7 @@ function VideoSettings({ user }) {
             <div className="mb-[22px] mt-[18px] flex gap-2.5">
               <PrejoinToggle
                 active={values.audio}
-                onClick={() => setFieldValue('audio', !values.audio)}
+                onClick={() => toggleTrack('audio', !values.audio, setFieldValue)}
                 onIcon={<MdMic />}
                 offIcon={<MdMicOff />}
                 onLabel="Mic on"
@@ -102,7 +107,7 @@ function VideoSettings({ user }) {
               />
               <PrejoinToggle
                 active={values.video}
-                onClick={() => setFieldValue('video', !values.video)}
+                onClick={() => toggleTrack('video', !values.video, setFieldValue)}
                 onIcon={<MdVideocam />}
                 offIcon={<MdVideocamOff />}
                 onLabel="Camera on"

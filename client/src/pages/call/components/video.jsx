@@ -25,7 +25,7 @@ function Video({ id, myself, user, media, onVideoSelect }) {
         muted={myself}
         autoPlay={true}
         playsInline={true}
-        className={`block h-full w-full object-cover ${media.video ? '' : 'opacity-0'}`}
+        className={`block h-full w-full object-cover ${myself ? '-scale-x-100' : ''} ${media.video ? '' : 'opacity-0'}`}
       />
 
       {!media.video && <PeerPlaceholder initial={initial} />}
