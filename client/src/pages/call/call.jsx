@@ -25,39 +25,66 @@ function Call() {
     setMediaStatus
   } = useVideoCall();
   const pendingCandidates = useRef({});
+  const selectedRef = useRef(null);
+  const selectedTrackRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [streamsVersion, setStreamsVersion] = useState(0);
+  selectedRef.current = selected;
 
   useEffect(() => {
     // The pre-join screen may have already acquired the camera/mic.
     if (!local_stream) initializeLocalStream();
   }, []);
 
-  const updateRemoteStreams = async (peerId, remoteStream) => {
+  const updateRemoteStreams = (peerId, remoteStream) => {
     if (!remoteStream) return;
     const videoTrack = remoteStream.getVideoTracks()[0];
     const audioTrack = remoteStream.getAudioTracks()[0];
     const remoteVideoEl = document.getElementById(`remote-video-${peerId}`);
     const remoteAudioEl = document.getElementById(`remote-audio-${peerId}`);
-    if (remoteVideoEl && videoTrack) {
+
+    if (remoteVideoEl && videoTrack && remoteVideoEl.srcObject?.getVideoTracks?.()[0] !== videoTrack) {
       remoteVideoEl.srcObject = new MediaStream([videoTrack]);
     }
-    if (remoteAudioEl && audioTrack) {
+    if (remoteAudioEl && audioTrack && remoteAudioEl.srcObject?.getAudioTracks?.()[0] !== audioTrack) {
       remoteAudioEl.srcObject = new MediaStream([audioTrack]);
     }
   };
 
+  // Re-attach streams whenever the tiles are re-rendered or a track arrives.
+  // Without this, a <video> that mounts after ontrack can stay black.
   useEffect(() => {
     const localVideoEl = document.getElementById("local");
-    if (localVideoEl) {
+    if (localVideoEl && local_stream && localVideoEl.srcObject !== local_stream) {
       localVideoEl.srcObject = local_stream;
+    }
+
+    const selectedVideoEl = document.getElementById('selected');
+    if (selectedVideoEl) {
+      const focusedId = selectedRef.current;
+      const selectedId = users.some(user => user.socket_id === focusedId) ? focusedId : null;
+      if (!selectedId) {
+        // No peer focused: speaker view shows your own camera.
+        if (local_stream && selectedVideoEl.srcObject !== local_stream) {
+          selectedVideoEl.srcObject = local_stream;
+        }
+        selectedTrackRef.current = null;
+      } else {
+        const remoteStream = pc.current[selectedId]?.remoteStream;
+        const track = remoteStream?.getVideoTracks?.()[0] || null;
+        if (track !== selectedTrackRef.current) {
+          selectedTrackRef.current = track;
+          selectedVideoEl.srcObject = track ? new MediaStream([track]) : null;
+        }
+      }
     }
 
     Object.keys(pc.current || {}).forEach(peerId => {
       const remoteStream = pc.current[peerId].remoteStream;
       updateRemoteStreams(peerId, remoteStream);
     });
-  }, [local_stream, layout]);
+  }, [local_stream, layout, users, selected, streamsVersion]);
 
   useEffect(() => {
 
@@ -66,6 +93,7 @@ function Call() {
       const remoteStream = event.streams[0];
       pc.current[peerId].remoteStream = remoteStream;
       updateRemoteStreams(peerId, remoteStream);
+      setStreamsVersion(version => version + 1);
     };
 
     const onIceCandidate = (event, peerId) => {
@@ -278,7 +306,8 @@ function Call() {
       room_id: roomId,
       data: {
         screen_sharing,
-        video: video_enabled || false,
+        // While sharing, the live screen track replaces the camera track.
+        video: video_enabled || screen_sharing,
         audio: audio_enabled || false,
       }
     });
