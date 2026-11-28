@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { socket } from '@/shared/socket';
 import VideoSettings from './components/video-settings';
+import { useVideoCall } from './video-call-context';
 
 const Context = createContext();
 
 export const useRoom = () => useContext(Context);
 
 function RoomProvider({ children, roomId, user }) {
+  const { setMediaStatus } = useVideoCall();
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
   const joinedRef = useRef(false);
@@ -38,6 +40,19 @@ function RoomProvider({ children, roomId, user }) {
       setUsers(data);
     };
 
+    // The server sends the latest mic/camera state of everyone already in the
+    // room when we join — live events alone would leave them looking muted.
+    const handleMediaStatuses = statuses => {
+      console.log('handleMediaStatuses', statuses);
+      setMediaStatus(previous => ({ ...previous, ...statuses }));
+    };
+
+    // Listen here as well as in Call so status changes that arrive before the
+    // call screen mounts are not lost.
+    const handlePeerMediaStatus = ({ socket_id, data }) => {
+      setMediaStatus(previous => ({ ...previous, [socket_id]: data }));
+    };
+
     const handleBeforeUnload = () => {
       socket.emit("leave", { 
         room_id: roomId,
@@ -61,6 +76,8 @@ function RoomProvider({ children, roomId, user }) {
     socket.on("joining", handleJoinRoom);
     socket.on("leaving", handleLeftRoom);
     socket.on("here", handleRoomUsers);
+    socket.on("media-statuses", handleMediaStatuses);
+    socket.on("media-status", handlePeerMediaStatus);
     socket.on("joined", handleJoined);
     socket.on('connect', onConnect);
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -69,12 +86,14 @@ function RoomProvider({ children, roomId, user }) {
       socket.off("joining", handleJoinRoom);
       socket.off("leaving", handleLeftRoom);
       socket.off("here", handleRoomUsers);
+      socket.off("media-statuses", handleMediaStatuses);
+      socket.off("media-status", handlePeerMediaStatus);
       socket.off("joined", handleJoined);
       socket.off('connect', onConnect);
       handleBeforeUnload();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [roomId]);
+  }, [roomId, setMediaStatus]);
 
   const joinRoom = (userId, userName) => {
     socket.emit("join", { 

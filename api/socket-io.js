@@ -35,6 +35,9 @@ const clean = (value, max = 100) =>
   typeof value === 'string' ? value.trim().slice(0, max) : '';
 
 const onlineUsers = new Map();
+// Last known media state per socket, so a late joiner learns who is muted
+// instead of falling back to the "muted / camera off" defaults.
+const roomMediaStatus = new Map();
 
 const publishUsers = () => io.emit('update_users', [...onlineUsers.values()]);
 
@@ -64,6 +67,7 @@ io.on('connection', (socket) => {
     if (previousRoom && previousRoom !== room) {
       socket.leave(previousRoom);
       socket.to(previousRoom).emit('leaving', { socket_id: socket.id });
+      roomMediaStatus.delete(socket.id);
     }
 
     if (user_id) socket.data.user_id = clean(user_id);
@@ -86,6 +90,16 @@ io.on('connection', (socket) => {
         }))
       : [];
 
+    // Send the joiner the latest status of everyone already in the room.
+    // Live `media-status` events only reach sockets that are connected when
+    // they fire, so without this the new peer sees everyone as muted.
+    const statuses = {};
+    for (const id of clients || []) {
+      const entry = roomMediaStatus.get(id);
+      if (entry && entry.room === room) statuses[id] = entry.data;
+    }
+    socket.emit('media-statuses', statuses);
+
     socket.emit('here', users);
     socket.emit('joined');
   });
@@ -97,13 +111,17 @@ io.on('connection', (socket) => {
     socket.leave(room);
     socket.to(room).emit('leaving', { socket_id: socket.id });
 
-    if (socket.data.room_id === room) delete socket.data.room_id;
+    if (socket.data.room_id === room) {
+      delete socket.data.room_id;
+      roomMediaStatus.delete(socket.id);
+    }
   });
 
   socket.on('media-status', ({ room_id, data } = {}) => {
-    const room = clean(room_id);
+    const room = clean(room_id) || socket.data.room_id;
     if (!room) return;
 
+    roomMediaStatus.set(socket.id, { room, data });
     io.to(room).emit('media-status', { socket_id: socket.id, data });
   });
 
@@ -127,6 +145,7 @@ io.on('connection', (socket) => {
 
     const room = socket.data.room_id;
     if (room) socket.to(room).emit('leaving', { socket_id: socket.id });
+    roomMediaStatus.delete(socket.id);
   });
 });
 
