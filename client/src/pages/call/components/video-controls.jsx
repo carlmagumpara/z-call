@@ -10,9 +10,31 @@ import {
   MdMoreVert
 } from 'react-icons/md';
 import { PiVideoConference, PiGridFour } from 'react-icons/pi';
-import { Form, Popconfirm, Modal, Select } from 'antd';
 import { useVideoCall } from '../video-call-context';
 import CallControlButton from './call-control-button';
+import ConfirmPopover from './confirm-popover';
+import Modal from './modal';
+
+function DeviceSelect({ id, label, value, devices, onChange }) {
+  return (
+    <div>
+      <label className="mb-2 block text-13 text-slate-label" htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        className="min-h-11 w-full cursor-pointer rounded-10 border border-stroke-strong bg-surface-input px-3.5 text-sm text-ink outline-none transition-colors focus:border-accent-input-border [&>option]:bg-[#0e1422] [&>option]:text-ink"
+        value={value || devices[0]?.deviceId || ''}
+        onChange={event => onChange(event.target.value)}
+      >
+        {devices.length === 0 && <option value="">No devices found</option>}
+        {devices.map(item => (
+          <option key={item.deviceId} value={item.deviceId}>
+            {item.label || 'Unnamed device'}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 function VideoControls() {
   const {
@@ -60,7 +82,7 @@ function VideoControls() {
           <span>{video_enabled ? 'Camera' : 'Start video'}</span>
         </CallControlButton>
 
-        <Popconfirm
+        <ConfirmPopover
           title="Screen Share"
           description={
             screen_sharing
@@ -68,19 +90,20 @@ function VideoControls() {
               : 'Share your screen with everyone in the call?'
           }
           onConfirm={() => (screen_sharing ? stopScreenShare() : setupScreenShare())}
-          onCancel={() => {}}
-          okText="Yes"
-          cancelText="No"
         >
-          <CallControlButton
-            state={screen_sharing ? 'active' : 'default'}
-            title={screen_sharing ? 'Stop sharing' : 'Share screen'}
-            aria-label={screen_sharing ? 'Stop sharing' : 'Share screen'}
-          >
-            {screen_sharing ? <MdOutlineStopScreenShare /> : <MdOutlineScreenShare />}
-            <span>{screen_sharing ? 'Stop share' : 'Share'}</span>
-          </CallControlButton>
-        </Popconfirm>
+          {(onOpen, open) => (
+            <CallControlButton
+              onClick={onOpen}
+              aria-expanded={open}
+              state={screen_sharing ? 'active' : 'default'}
+              title={screen_sharing ? 'Stop sharing' : 'Share screen'}
+              aria-label={screen_sharing ? 'Stop sharing' : 'Share screen'}
+            >
+              {screen_sharing ? <MdOutlineStopScreenShare /> : <MdOutlineScreenShare />}
+              <span>{screen_sharing ? 'Stop share' : 'Share'}</span>
+            </CallControlButton>
+          )}
+        </ConfirmPopover>
 
         <CallControlButton
           onClick={() => setLayout(layout === 'grid' ? 'single-grid' : 'grid')}
@@ -100,65 +123,52 @@ function VideoControls() {
           <span>Settings</span>
         </CallControlButton>
 
-        <Popconfirm
+        <ConfirmPopover
           title="Leave Call?"
           description="Are you sure you want to leave this call?"
+          confirmLabel="Leave"
+          tone="danger"
           onConfirm={() => endCall()}
-          onCancel={() => {}}
-          okText="Yes"
-          cancelText="No"
         >
-          <CallControlButton state="end" title="Leave call" aria-label="Leave call">
-            <MdOutlineCallEnd />
-            <span>Leave</span>
-          </CallControlButton>
-        </Popconfirm>
+          {(onOpen, open) => (
+            <CallControlButton
+              onClick={onOpen}
+              aria-expanded={open}
+              state="end"
+              title="Leave call"
+              aria-label="Leave call"
+            >
+              <MdOutlineCallEnd />
+              <span>Leave</span>
+            </CallControlButton>
+          )}
+        </ConfirmPopover>
       </div>
 
-      <Modal
-        title="Device settings"
-        closable={{ 'aria-label': 'Custom Close Button' }}
-        open={open}
-        okText="Done"
-        onOk={() => setOpen(false)}
-        onCancel={() => setOpen(false)}
-        cancelButtonProps={{ className: '!hidden' }}
-      >
-        <Form layout="vertical">
-          <Form.Item label="Camera">
-            <Select
-              defaultValue={video_input_device_id}
-              className="!w-full"
-              options={video_inputs.map((item) => ({
-                label: item.label,
-                value: item.deviceId,
-              }))}
-              onChange={value => switchVideoInput(value)}
-            />
-          </Form.Item>
-          <Form.Item label="Audio Input">
-            <Select
-              defaultValue={audio_input_device_id}
-              className="!w-full"
-              options={audio_inputs.map((item) => ({
-                label: item.label,
-                value: item.deviceId,
-              }))}
-              onChange={value => switchAudioInput(value)}
-            />
-          </Form.Item>
-          <Form.Item label="Audio Output">
-            <Select
-              defaultValue={audio_output_device_id}
-              className="!w-full"
-              options={audio_outputs.map((item) => ({
-                label: item.label,
-                value: item.deviceId,
-              }))}
-              onChange={value => switchAudioOutput(value)}
-            />
-          </Form.Item>
-        </Form>
+      <Modal title="Device settings" open={open} onClose={() => setOpen(false)}>
+        <div className="flex flex-col gap-4">
+          <DeviceSelect
+            id="camera-input"
+            label="Camera"
+            value={video_input_device_id}
+            devices={video_inputs}
+            onChange={value => switchVideoInput(value)}
+          />
+          <DeviceSelect
+            id="audio-input"
+            label="Audio Input"
+            value={audio_input_device_id}
+            devices={audio_inputs}
+            onChange={value => switchAudioInput(value)}
+          />
+          <DeviceSelect
+            id="audio-output"
+            label="Audio Output"
+            value={audio_output_device_id}
+            devices={audio_outputs}
+            onChange={value => switchAudioOutput(value)}
+          />
+        </div>
       </Modal>
     </>
   );

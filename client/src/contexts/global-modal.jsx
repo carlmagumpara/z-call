@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, Suspense, useEffect, lazy } from 'react';
+import { createContext, useContext, useState, Suspense, lazy } from 'react';
 const Context = createContext();
 
 const MODAL_COMPONENTS = {
